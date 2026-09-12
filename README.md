@@ -1,4 +1,21 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sports AI Platform
+
+Next.js application organized by responsibility so new sports features can be
+added without putting all UI and domain logic in the route files.
+
+## Project structure
+
+```text
+src/
+├── app/                 # Routes, layouts and global styles
+├── components/
+│   ├── home/            # Home-page composition
+│   └── layout/          # Shared page layout components
+└── lib/                 # Shared configuration and utilities
+```
+
+Keep route files in `src/app` thin. Place reusable visual pieces in
+`src/components`, and shared non-visual code in `src/lib`.
 
 ## Getting Started
 
@@ -18,7 +35,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font).
 
 ## Learn More
 
