@@ -81,7 +81,7 @@ export default async function PlayersListPage({
           </div>
           <Row className="flex-wrap gap-2">
             <LinkButton href={`/${sport}`} tone="ghost" size="md">
-              ← Inicio
+              ← Volver
             </LinkButton>
             <LinkButton href={`/${sport}/standings`} tone="outline" size="md">
               Tabla
@@ -186,12 +186,6 @@ export default async function PlayersListPage({
                         <Tr
                           key={p.id}
                           hoverable
-                          onClick={() => {
-                            if (typeof window !== "undefined") {
-                              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                              window.location.href = `/${sport}/players/${p.id}`;
-                            }
-                          }}
                           className="cursor-pointer"
                         >
                           <Td className="font-semibold text-slate-500 tabular-nums">

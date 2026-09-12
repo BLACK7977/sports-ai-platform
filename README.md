@@ -51,3 +51,26 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Produccion y Vercel
+
+Configura estas variables en Vercel antes del deploy:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: URL del proyecto Supabase.
+- `SUPABASE_SERVICE_ROLE_KEY`: clave privada, solo server-side.
+- `OPENAI_API_KEY`: opcional; sin ella se usa Mock LLM.
+- `OPENAI_MODEL`: por defecto `gpt-4o-mini`.
+- `ENABLE_OFFLINE_MODE`: `true` para forzar datos demo; `false` para usar Supabase cuando hay credenciales.
+- `USE_LLM_MOCK`: `true` para forzar respuestas demo; `false` para usar OpenAI cuando hay clave.
+
+Ejecuta la migracion `supabase/migrations/001_create_core_tables.sql` en Supabase y carga `supabase/seed/demo-soccer.sql` si necesitas los datos demo en la base cloud. `NEXT_PUBLIC_SUPABASE_ANON_KEY` queda disponible para futuras lecturas publicas, pero las operaciones actuales del servidor usan `SUPABASE_SERVICE_ROLE_KEY`.
+
+Para validar un build local:
+
+```bash
+npm run build
+npm start
+npm run e2e
+```
+
+`npm run e2e` espera que el servidor este disponible en `http://localhost:3000`; puedes cambiarlo con `BASE_URL`.

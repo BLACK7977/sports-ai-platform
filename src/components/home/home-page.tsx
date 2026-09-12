@@ -18,6 +18,13 @@ import { getAllLeagues as getLeagues } from "@/lib/db/repositories/leagues-repo"
 import { getActiveSports } from "@/lib/config/sports-registry";
 import { ensureDbReady } from "@/lib/db/client";
 
+const features = [
+  ["01", "Partidos", "Forma, contexto y lectura previa de cada encuentro.", "/soccer/matches"],
+  ["02", "Jugadores", "Rendimiento individual, rankings y reportes comparables.", "/soccer/players"],
+  ["03", "Estadísticas", "Tabla, tendencias y señales visibles en un mismo flujo.", "/soccer/standings"],
+  ["04", "Análisis IA", "Interpretaciones basadas en los datos disponibles.", "/soccer/matches/m-l1-1"],
+] as const;
+
 export default async function HomePage() {
   await ensureDbReady();
   const [matchesCount, playersCount, leagues, sports] = await Promise.all([
@@ -37,183 +44,96 @@ export default async function HomePage() {
   const lastMatches = demoMatches.slice(0, 5);
 
   return (
-    <Container size="wide">
-      <Stack as="section" gap="xl">
-        <header className="rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-8 sm:p-12 text-white shadow-lg">
-          <div className="max-w-2xl space-y-4">
-            <Badge tone="primary" className="bg-white/20 text-white ring-0">
-              Plataforma deportiva con IA
-            </Badge>
-            <h1 className="text-3xl sm:text-4xl font-bold leading-tight">
-              Estadísticas, partidos y análisis inteligente de tus deportes
-              favoritos
-            </h1>
-            <p className="text-white/80 text-base sm:text-lg max-w-xl">
-              Modo offline con datos demo de fútbol. Pronósticos, análisis de
-              partido y reportes de jugador con LLM.
-            </p>
-            <Row>
-              <LinkButton href="/soccer" tone="secondary" size="lg">
-                Explorar Fútbol
-              </LinkButton>
-              <LinkButton
-                href="/soccer/matches"
-                tone="ghost"
-                size="lg"
-                className="text-white hover:bg-white/15 border border-white/20"
-              >
-                Ver partidos
-              </LinkButton>
-            </Row>
-          </div>
-        </header>
+    <div className="home-stage">
+      <Container size="wide">
+        <Stack as="section" gap="xl">
+          <header className="home-hero">
+            <div className="home-hero-grid" aria-hidden />
+            <div className="relative z-10 max-w-3xl space-y-6">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge tone="primary" className="home-kicker">SPORTS AI / FOOTBALL INTELLIGENCE</Badge>
+                <span className="home-live-dot"><span /> Sistema operativo</span>
+              </div>
+              <h1 className="home-title">Análisis inteligente de fútbol<span className="home-title-mark">.</span></h1>
+              <p className="home-lede">
+                Un centro de lectura deportiva para explorar partidos, rendimiento y señales de forma con datos disponibles y análisis asistido por IA.
+              </p>
+              <Row className="flex-wrap gap-3">
+                <LinkButton href="/soccer" tone="primary" size="lg">Abrir centro de fútbol</LinkButton>
+                <LinkButton href="/soccer/matches" tone="ghost" size="lg" className="home-ghost-button">Ver partidos</LinkButton>
+              </Row>
+              <div className="home-proof-row">
+                <span><strong>{matchesCount}</strong> partidos indexados</span>
+                <span><strong>{playersCount}</strong> perfiles disponibles</span>
+                <span><strong>{leagues.length}</strong> competiciones</span>
+              </div>
+            </div>
+            <div className="home-signal-panel" aria-label="Estado de datos demo">
+              <div className="home-panel-top"><span>LIVE DATA / 01</span><span className="home-panel-status">DEMO FEED</span></div>
+              <div className="home-signal-ring"><span>AI</span></div>
+              <div className="home-panel-reading"><span>Lectura del sistema</span><strong>Datos listos para explorar</strong></div>
+              <div className="home-signal-bars" aria-hidden><i /><i /><i /><i /><i /><i /><i /></div>
+              <p>Las métricas demo están identificadas y pueden reemplazarse por datos de Supabase sin cambiar la interfaz.</p>
+            </div>
+          </header>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
-            <CardBody className="space-y-1">
-              <div className="text-xs text-slate-500">Deportes activos</div>
-              <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                {sports.length}
-              </div>
-              <div className="text-xs text-indigo-600 dark:text-indigo-400">
-                {sports.map((s) => s.emoji).join(" ")}{" "}
-                {sports.map((s) => s.displayName).join(", ")}
-              </div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="space-y-1">
-              <div className="text-xs text-slate-500">Partidos demo</div>
-              <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                {matchesCount}
-              </div>
-              <div className="text-xs text-emerald-600">
-                Modo offline activo
-              </div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="space-y-1">
-              <div className="text-xs text-slate-500">Ligas</div>
-              <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                {leagues.length}
-              </div>
-              <div className="text-xs text-slate-500">
-                {leagues.slice(0, 2).map((l) => l.name).join(" · ")}
-              </div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody className="space-y-1">
-              <div className="text-xs text-slate-500">Jugadores</div>
-              <div className="text-3xl font-bold text-slate-900 dark:text-white">
-                {playersCount}
-              </div>
-              <div className="text-xs text-slate-500">20 plantillas x 10</div>
-            </CardBody>
-          </Card>
-        </div>
+          <section className="home-section-head">
+            <div><span className="home-eyebrow">NÚCLEO / CAPACIDADES</span><h2>Todo el partido, en una sola lectura.</h2></div>
+            <p>Una base modular para sumar fuentes deportivas, mercados e inteligencia sin perder claridad.</p>
+          </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <CardHeader
-              action={
-                <LinkButton href="/soccer/matches" size="sm" tone="ghost">
-                  Ver todos
-                </LinkButton>
-              }
-            >
-              <CardTitle>Últimos resultados</CardTitle>
-              <CardSubtitle>Demo Liga Apertura</CardSubtitle>
-            </CardHeader>
-            <CardBody>
-              <Stack gap="sm">
-                {lastMatches.length === 0 ? (
-                  <p className="text-sm text-slate-400">
-                    No hay partidos para mostrar.
-                  </p>
-                ) : (
-                  lastMatches.map((m) => {
-                    const badge = formatBadgeForStatus(m.status);
-                    const home = m.home_team_id
-                      .replaceAll("-", " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase());
-                    const away = m.away_team_id
-                      .replaceAll("-", " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase());
-                    return (
-                      <Link
-                        key={m.id}
-                        href={`/soccer/matches/${m.id}`}
-                        className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
-                      >
-                        <div className="text-right">
-                          <div className="font-medium text-slate-800 dark:text-slate-100">
-                            {home}
-                          </div>
-                          <div className="text-xs text-slate-400 truncate">
-                            {new Date(m.match_date).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <div className="text-base font-bold tabular-nums px-2">
-                          {m.status === "finished" || m.status === "in_progress"
-                            ? `${m.home_score ?? 0} - ${m.away_score ?? 0}`
-                            : "vs"}
-                        </div>
-                        <div>
-                          <div className="font-medium text-slate-800 dark:text-slate-100">
-                            {away}
-                          </div>
-                        </div>
-                        <Badge tone={badge.tone}>{badge.label}</Badge>
-                      </Link>
-                    );
-                  })
-                )}
-              </Stack>
-            </CardBody>
-          </Card>
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {features.map(([index, title, description, href]) => (
+              <Link key={title} href={href} className="home-feature-card">
+                <span className="home-feature-index">{index}</span>
+                <span className="home-feature-title">{title}</span>
+                <span className="home-feature-description">{description}</span>
+                <span className="home-feature-arrow">↗</span>
+              </Link>
+            ))}
+          </section>
 
-          <Card>
-            <CardHeader
-              action={
-                <LinkButton href="/soccer/standings" size="sm" tone="ghost">
-                  Tabla
-                </LinkButton>
-              }
-            >
-              <CardTitle>Categorías</CardTitle>
-              <CardSubtitle>Explorar por deporte</CardSubtitle>
-            </CardHeader>
-            <CardBody>
-              <Stack gap="sm">
-                {sports.map((s) => (
-                  <Link
-                    key={s.id}
-                    href={`/${s.id}`}
-                    className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 p-4 hover:border-indigo-400 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/10 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl" aria-hidden>
-                        {s.emoji}
-                      </span>
-                      <div>
-                        <div className="font-semibold text-slate-800 dark:text-slate-100">
-                          {s.displayName}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {s.routesPath}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-slate-400">→</span>
-                  </Link>
-                ))}
-              </Stack>
-            </CardBody>
-          </Card>
-        </div>
-      </Stack>
-    </Container>
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2 home-surface">
+              <CardHeader action={<LinkButton href="/soccer/matches" size="sm" tone="ghost">Ver todos</LinkButton>}>
+                <CardTitle>Últimos resultados</CardTitle>
+                <CardSubtitle>Demo Liga Apertura · señal de actividad</CardSubtitle>
+              </CardHeader>
+              <CardBody>
+                <Stack gap="sm">
+                  {lastMatches.length === 0 ? <p className="text-sm text-slate-400">No hay partidos para mostrar.</p> : lastMatches.map((match) => {
+                    const badge = formatBadgeForStatus(match.status);
+                    const home = match.home_team_id.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+                    const away = match.away_team_id.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+                    return <Link key={match.id} href={`/soccer/matches/${match.id}`} className="home-match-row">
+                      <span className="home-match-date">{new Date(match.match_date).toLocaleDateString()}</span>
+                      <span className="home-match-team home-match-team-right">{home}</span>
+                      <span className="home-match-score">{match.status === "finished" || match.status === "in_progress" ? `${match.home_score ?? 0} - ${match.away_score ?? 0}` : "vs"}</span>
+                      <span className="home-match-team">{away}</span>
+                      <Badge tone={badge.tone}>{badge.label}</Badge>
+                    </Link>;
+                  })}
+                </Stack>
+              </CardBody>
+            </Card>
+
+            <Card className="home-surface">
+              <CardHeader action={<LinkButton href="/soccer/standings" size="sm" tone="ghost">Tabla</LinkButton>}>
+                <CardTitle>Centro de fútbol</CardTitle>
+                <CardSubtitle>Accesos de análisis</CardSubtitle>
+              </CardHeader>
+              <CardBody><Stack gap="sm">
+                <Link href="/soccer" className="home-access-row"><span>Visión general</span><span>↗</span></Link>
+                <Link href="/soccer/players" className="home-access-row"><span>Jugadores</span><span>↗</span></Link>
+                <Link href="/soccer/leaderboard" className="home-access-row"><span>Ranking</span><span>↗</span></Link>
+                <div className="home-demo-note"><span className="home-live-dot"><span /> Demo / offline</span><p>La plataforma conserva datos demo cuando no hay conexión externa.</p></div>
+              </Stack></CardBody>
+            </Card>
+          </section>
+
+          <footer className="home-footnote"><span>SPORTS AI / SIGNALS FOR THE BEAUTIFUL GAME</span><span>{sports.map((sport) => sport.displayName).join(" · ")}</span></footer>
+        </Stack>
+      </Container>
+    </div>
   );
 }

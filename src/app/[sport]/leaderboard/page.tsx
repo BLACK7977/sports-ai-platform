@@ -11,10 +11,14 @@ import { getTeamSquadRanking } from "@/lib/services/statistics-service";
 
 export default async function LeaderboardRoute({
   params,
+  searchParams,
 }: {
   params: Promise<{ sport: string }>;
+  searchParams: Promise<{ chart?: string }>;
 }) {
   const { sport } = await params;
+  const { chart: chartParam } = await searchParams;
+  const chart = chartParam === "assists" || chartParam === "ga" ? chartParam : "goals";
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();
@@ -39,6 +43,7 @@ export default async function LeaderboardRoute({
       })}
       seasonName={formatSeasonName(seasonId)}
       squadRanking={ranking}
+      chart={chart}
     />
   );
 }

@@ -37,12 +37,12 @@ export default async function MatchDetailRoute({
       getStatsByMatchId(id),
       Promise.resolve(actionAnalyzeMatch(sport, id)).then(
         (x) =>
-          (x.ok && x.data) || generateMatchAnalysis(sport, id, "mock"),
+          (x.ok && x.data) || generateMatchAnalysis(sport, id),
       ),
       Promise.resolve(actionPredictMatch(sport, leagueId, seasonId, id)).then(
         (x) =>
           (x.ok && x.data) ||
-          predictMatch(sport, leagueId, seasonId, id, "mock"),
+          predictMatch(sport, leagueId, seasonId, id),
       ),
       getTeamStandings(sport, leagueId, seasonId),
       getMatchesByLeagueSeason(leagueId, seasonId),

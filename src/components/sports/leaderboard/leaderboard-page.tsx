@@ -36,12 +36,14 @@ export default async function LeaderboardPage({
   seasonName,
   squadRanking,
   topN = 15,
+  chart = "goals",
 }: {
   sport: string;
   leagueName: string;
   seasonName: string;
   squadRanking: RankRow[];
   topN?: number;
+  chart?: "goals" | "assists" | "ga";
 }) {
   const has = getHasSport(sport);
   const sportEmoji = has?.sport.emoji ?? "⚽";
@@ -70,11 +72,14 @@ export default async function LeaderboardPage({
   const maxA = Math.max(1, ...byAssists.map((r) => r.assists));
   const maxGa = Math.max(1, ...byGa.map((r) => r.goals + r.assists));
 
-  const goalsChart = byGoals.slice(0, 8).map((r) => ({
+  const chartRows = chart === "assists" ? byAssists : chart === "ga" ? byGa : byGoals;
+  const chartMax = chart === "assists" ? maxA : chart === "ga" ? maxGa : maxG;
+  const chartLabel = chart === "assists" ? "asistencias" : chart === "ga" ? "G+A" : "goles";
+  const chartData = chartRows.slice(0, 8).map((r) => ({
     name: r.fullName,
     short: r.fullName.split(" ").slice(-1).join(" ") || r.fullName.slice(0, 8),
-    value: r.goals,
-    max: maxG,
+    value: chart === "assists" ? r.assists : chart === "ga" ? r.goals + r.assists : r.goals,
+    max: chartMax,
   }));
 
   return (
@@ -101,7 +106,7 @@ export default async function LeaderboardPage({
           </div>
           <Row className="flex-wrap gap-2">
             <LinkButton href={`/${sport}`} tone="ghost" size="md">
-              ← Inicio
+              ← Volver
             </LinkButton>
             <LinkButton href={`/${sport}/standings`} tone="outline" size="md">
               Tabla equipos
@@ -162,14 +167,30 @@ export default async function LeaderboardPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Top goleadores</CardTitle>
-            <CardSubtitle>Primeros 8 puestos · barras comparativas</CardSubtitle>
+            <CardTitle>Comparativo de rendimiento</CardTitle>
+            <CardSubtitle>Primeros 8 puestos · {chartLabel}</CardSubtitle>
           </CardHeader>
           <CardBody>
-            {byGoals.length === 0 ? (
+            <nav aria-label="Métrica de gráfica" className="mb-4 flex flex-wrap gap-2">
+              {([
+                ["goals", "Goles"],
+                ["assists", "Asistencias"],
+                ["ga", "G+A"],
+              ] as const).map(([value, label]) => (
+                <LinkButton
+                  key={value}
+                  href={`/${sport}/leaderboard?chart=${value}`}
+                  size="sm"
+                  tone={chart === value ? "primary" : "outline"}
+                >
+                  {label}
+                </LinkButton>
+              ))}
+            </nav>
+            {chartRows.length === 0 ? (
               <p className="text-sm text-slate-400">Sin datos.</p>
             ) : (
-              <StandingsBars data={goalsChart} />
+              <StandingsBars data={chartData} />
             )}
           </CardBody>
         </Card>

@@ -61,7 +61,7 @@ export default async function StandingsPage({
           </div>
           <Row className="flex-wrap gap-2">
             <LinkButton href={`/${sport}`} tone="ghost" size="md">
-              ← Inicio
+              ← Volver
             </LinkButton>
             <LinkButton href={`/${sport}/matches`} tone="outline" size="md">
               Ver fixtures

@@ -21,7 +21,7 @@ export async function actionAnalyzeMatch(
     return { ok: false as const, error: "Partido no encontrado." };
   }
   try {
-    const res = await generateMatchAnalysis(sportId, matchId, "mock");
+    const res = await generateMatchAnalysis(sportId, matchId);
     return { ok: true as const, data: res };
   } catch (err) {
     return {
@@ -46,7 +46,6 @@ export async function actionPredictMatch(
       leagueId,
       seasonId,
       matchId,
-      "mock",
     );
     return { ok: true as const, data };
   } catch (err) {

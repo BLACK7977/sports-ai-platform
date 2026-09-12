@@ -2,6 +2,8 @@
 import "@/lib/config/env";
 import type { SportId } from "@/types/core/sport";
 import type {
+  ChatMessage,
+  ChatOptions,
   MatchAnalysisResult,
   MatchPredictionResult,
   PlayerInsightResult,
@@ -57,6 +59,22 @@ function safeJsonParse<T>(
   }
 }
 
+async function chatWithFallback(
+  providerHint: "mock" | "openai" | undefined,
+  messages: ChatMessage[],
+  options: ChatOptions,
+): Promise<string> {
+  const provider = getLlmProvider(providerHint);
+  try {
+    return await provider.chat(messages, options);
+  } catch (error) {
+    if (provider.id === "mock") throw error;
+    console.warn(
+      `[AI] ${provider.name} failed; falling back to Mock LLM: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return getLlmProvider("mock").chat(messages, options);
+  }
+}
 function collectGoalAssistRating(
   playerStats: PlayerMatchStats[],
 ): Record<
@@ -211,8 +229,8 @@ export async function generateMatchAnalysis(
     recentAwayForm: aForm,
   });
 
-  const llm = getLlmProvider(providerHint);
-  const text = await llm.chat(
+  const text = await chatWithFallback(
+    providerHint,
     [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -329,8 +347,8 @@ export async function predictMatch(
     last5Away: aForm,
   });
 
-  const llm = getLlmProvider(providerHint);
-  const text = await llm.chat(
+  const text = await chatWithFallback(
+    providerHint,
     [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -486,8 +504,8 @@ export async function generatePlayerReport(
     perMatch,
   });
 
-  const llm = getLlmProvider(providerHint);
-  const text = await llm.chat(
+  const text = await chatWithFallback(
+    providerHint,
     [
       { role: "system", content: system },
       { role: "user", content: user },

@@ -51,7 +51,7 @@ export default async function PlayerDetailRoute({
   ).then(
     (x) =>
       (x.ok && x.data) ||
-      generatePlayerReport(sport, leagueId, seasonId, id, "mock"),
+      generatePlayerReport(sport, leagueId, seasonId, id),
   );
 
   return (

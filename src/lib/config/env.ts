@@ -36,6 +36,15 @@ const envSchema = z.object({
     z.string().optional(),
   ),
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+
+  ENABLE_OFFLINE_MODE: z.preprocess(
+    (v) => (typeof v === "string" ? v.toLowerCase() === "true" : v),
+    z.boolean().default(false),
+  ),
+  USE_LLM_MOCK: z.preprocess(
+    (v) => (typeof v === "string" ? v.toLowerCase() === "true" : v),
+    z.boolean().default(false),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -54,6 +63,8 @@ function parseEnv(): Env {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
+    ENABLE_OFFLINE_MODE: process.env.ENABLE_OFFLINE_MODE,
+    USE_LLM_MOCK: process.env.USE_LLM_MOCK,
   });
 
   if (!parsed.success) {

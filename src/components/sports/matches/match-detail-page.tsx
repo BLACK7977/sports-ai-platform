@@ -115,13 +115,13 @@ export default function MatchDetailPage({
 
         <Card>
           <CardBody className="py-8">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-8 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-8 text-center">
               <div className="space-y-3">
                 <div className="text-4xl" aria-hidden>
                   {home.name.split(" ")[0].charAt(0) +
                     (home.name.split(" ")[1]?.charAt(0) ?? "")}
                 </div>
-                <div className="text-xl font-bold">{home.name}</div>
+                <div className="text-xl font-bold break-words">{home.name}</div>
                 <div className="text-xs text-slate-500">{home.short_name}</div>
                 <div className="flex justify-center">
                   <TeamFormStrip form={hForm} size={22} />
@@ -145,7 +145,7 @@ export default function MatchDetailPage({
                   {away.name.split(" ")[0].charAt(0) +
                     (away.name.split(" ")[1]?.charAt(0) ?? "")}
                 </div>
-                <div className="text-xl font-bold">{away.name}</div>
+                <div className="text-xl font-bold break-words">{away.name}</div>
                 <div className="text-xs text-slate-500">{away.short_name}</div>
                 <div className="flex justify-center">
                   <TeamFormStrip form={aForm} size={22} />
@@ -159,7 +159,7 @@ export default function MatchDetailPage({
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Análisis del partido (IA)</CardTitle>
-              <CardSubtitle>Generado con Mock LLM</CardSubtitle>
+              <CardSubtitle>Generado por el proveedor LLM configurado</CardSubtitle>
             </CardHeader>
             <CardBody className="space-y-4">
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 p-4">

@@ -175,7 +175,7 @@ export default async function PlayerDetailPage({
                     <Badge tone="warning">{player.nationality}</Badge>
                   ) : null}
                 </Row>
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white truncate">
+                <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white break-words">
                   {player.full_name}
                 </h1>
                 <p className="text-slate-500 max-w-3xl">

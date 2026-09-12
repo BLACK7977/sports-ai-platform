@@ -1,6 +1,10 @@
+import { getEnv } from "@/lib/config/env";
+
+const env = getEnv();
+
 export const featureFlags = {
-  USE_LLM_MOCK: true,
-  ENABLE_OFFLINE_MODE: true,
+  USE_LLM_MOCK: env.USE_LLM_MOCK,
+  ENABLE_OFFLINE_MODE: env.ENABLE_OFFLINE_MODE,
   ENABLE_STATS_CACHE: true,
   ENABLE_AI_CACHE: true,
 } as const;

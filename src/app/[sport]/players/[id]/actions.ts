@@ -26,7 +26,6 @@ export async function actionGeneratePlayerReport(
       leagueId,
       seasonId,
       playerId,
-      "mock",
     );
     return { ok: true as const, data };
   } catch (err) {

@@ -107,11 +107,14 @@ export async function createSupabaseDbClient(): Promise<DbClient> {
     init: async () => {
       try {
         const start = performance.now();
-        await sb.from("sports").select("id", { count: "exact", head: true });
+        const { error } = await sb.from("sports").select("id", { count: "exact", head: true });
+        if (error) throw new Error(error.message);
         console.log(`[DB] Supabase Cloud connected OK (${Math.round(performance.now() - start)}ms) · project=${new URL(env.NEXT_PUBLIC_SUPABASE_URL!).hostname}`);
         void TABLE_NAMES;
       } catch (err) {
-        console.warn("[DB] Supabase Cloud init warn: " + (err instanceof Error ? err.message : String(err)));
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.warn("[DB] Supabase Cloud init failed: " + error.message);
+        throw error;
       }
     },
     isOffline: () => false,

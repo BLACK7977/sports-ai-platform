@@ -109,8 +109,20 @@ export async function getDbClient(): Promise<DbClient> {
 
 export async function ensureDbReady(): Promise<DbClient> {
   const client = await getDbClient();
-  await client.init();
-  return client;
+  try {
+    await client.init();
+    return client;
+  } catch (err) {
+    if (client.isOffline()) throw err;
+
+    cachedClient = buildStoreOfflineClient();
+    await cachedClient.init();
+    console.warn(
+      "[DB] Supabase unavailable; using IN-MEMORY OFFLINE fallback: " +
+        (err instanceof Error ? err.message : String(err)),
+    );
+    return cachedClient;
+  }
 }
 
 export function getActiveSportIds(): SportId[] {

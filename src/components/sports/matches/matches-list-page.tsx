@@ -93,7 +93,7 @@ export default async function MatchesListPage({
           <CardHeader
             action={
               <LinkButton href={`/${sport}`} size="sm" tone="ghost">
-                Volver
+                ← Volver
               </LinkButton>
             }
           >
@@ -123,13 +123,7 @@ export default async function MatchesListPage({
                       return (
                         <Tr
                           key={m.id}
-                          onClick={() => {
-                            // Link manual para evitar Next 16 hooks issues (MVP simple)
-                            if (typeof window !== "undefined") {
-                              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-                              window.location.href = `/${sport}/matches/${m.id}`;
-                            }
-                          }}
+                          hoverable
                         >
                           <Td>
                             <div className="font-medium">

@@ -1,7 +1,7 @@
 export function StandingsBars({
   data,
   width = 520,
-  height = 340,
+  height = 240,
 }: {
   data: Array<{
     name: string;
@@ -12,10 +12,10 @@ export function StandingsBars({
   width?: number;
   height?: number;
 }) {
-  const padLeft = 100;
-  const padRight = 40;
-  const padTop = 20;
-  const padBottom = 28;
+  const padLeft = 82;
+  const padRight = 30;
+  const padTop = 14;
+  const padBottom = 24;
   const usableW = width - padLeft - padRight;
   const usableH = height - padTop - padBottom;
   const barGap = 8;
@@ -36,7 +36,7 @@ export function StandingsBars({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label="Gráfico de barras de puntos por equipo"
-      className="w-full h-auto"
+      className="block w-full max-w-2xl mx-auto h-auto"
     >
       {Array.from({ length: gridTicks + 1 }).map((_, i) => {
         const x = padLeft + (usableW * i) / gridTicks;
@@ -166,7 +166,7 @@ export function PlayerStatsRadar({
   labels,
   values,
   width = 320,
-  height = 320,
+  height = 260,
   label = "Radar",
 }: {
   labels: readonly string[];
@@ -206,7 +206,7 @@ export function PlayerStatsRadar({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={label}
-      className="w-full h-auto"
+      className="block w-full max-w-sm mx-auto h-auto"
     >
       {rings.map((r, ri) => {
         const pts = labels
@@ -300,7 +300,7 @@ export function MiniGauge({
           </span>
         </div>
       ) : null}
-      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h}>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} className="w-full max-w-28 h-auto">
         <rect
           x={0}
           y={0}
