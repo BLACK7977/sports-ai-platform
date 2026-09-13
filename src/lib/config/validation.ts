@@ -17,7 +17,9 @@ export const entityIdSchema = z
   .string()
   .min(1, "id inválido")
   .max(120, "id inválido")
-  .regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/, "id inválido");
+  // Los IDs externos namespaced (p. ej. sportmonks:match:19713942)
+  // llegan como segmentos de ruta válidos y deben conservar sus dos puntos.
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/, "id inválido");
 
 export const matchViewSchema = z.enum([
   "week",

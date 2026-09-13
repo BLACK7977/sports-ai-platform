@@ -10,6 +10,7 @@ import {
   type ProfileResult,
 } from "@/lib/auth/session";
 import { isSafeNextPath, safeNextPath } from "@/lib/auth/redirects";
+import { parseEntityId, parseSportId } from "@/lib/config/validation";
 
 let passed = 0;
 let failed = 0;
@@ -194,6 +195,32 @@ async function runTests(): Promise<void> {
   ].map(readFile).join("\n");
   check("K16: no service_role in client files", !/service_role|SERVICE_ROLE_KEY/.test(clientFiles));
   check("K17: no JWT/token leaks", !/eyJ[A-Za-z0-9_-]{20,}/.test(clientFiles));
+
+  // ── L. Entity ID validation (namespaced IDs with ":") ──
+  console.log("\n--- L. Entity ID validation (namespaced IDs) ---");
+  // Valid
+  check("L1: simple-id valid", parseEntityId("match-123") === "match-123");
+  check("L2: underscore_id valid", parseEntityId("match_123") === "match_123");
+  check("L3: dotted.id valid", parseEntityId("sportmonks.match-123") === "sportmonks.match-123");
+  check("L4: namespaced:match:19713942 valid", parseEntityId("m-soccer-sportmonks:match:19713942") === "m-soccer-sportmonks:match:19713942");
+  check("L5: sportmonks:match:99 valid", parseEntityId("sportmonks:match:99") === "sportmonks:match:99");
+  check("L6: league-2024 valid", parseEntityId("league-2024") === "league-2024");
+  check("L7: single char valid", parseEntityId("a") === "a");
+  // Invalid
+  check("L8: empty string invalid", parseEntityId("") === null);
+  check("L9: spaces invalid", parseEntityId("match 123") === null);
+  check("L10: slash invalid", parseEntityId("match/123") === null);
+  check("L11: backslash invalid", parseEntityId("match\\123") === null);
+  check("L12: question mark invalid", parseEntityId("match?123") === null);
+  check("L13: hash invalid", parseEntityId("match#123") === null);
+  check("L14: control char invalid", parseEntityId("match\x00123") === null);
+  check("L15: starts with : invalid", parseEntityId(":match") === null);
+  // Existing IDs without ":" still work
+  check("L16: existing simple ID still valid", parseEntityId("19713942") === "19713942");
+  check("L17: existing hyphenated ID still valid", parseEntityId("team-abc-123") === "team-abc-123");
+  // sportId unchanged
+  check("L18: sportId rejects colon", parseSportId("so:ccer") === null);
+  check("L19: sportId accepts normal", parseSportId("soccer") === "soccer");
 
   console.log("\n======================================================================");
   console.log(
