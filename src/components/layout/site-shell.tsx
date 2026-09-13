@@ -90,7 +90,7 @@ export async function SiteHeader() {
   const sports = getActiveSports();
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-cyan-100/10 bg-[#050d18]/88 backdrop-blur">
+      <header className="sticky top-0 z-40 border-b border-cyan-100/10 bg-[#050d18]">
         <Container size="wide" className="h-16 flex items-center justify-between gap-4">
           <Link
             href="/"
@@ -145,7 +145,7 @@ export function SiteFooter() {
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-dvh flex-col">
       <SiteHeader />
       <main className="sports-app-main flex-1 py-8">{children}</main>
       <SportsNavigation variant="mobile" />

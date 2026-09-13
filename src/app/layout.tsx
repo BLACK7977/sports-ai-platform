@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${rajdhani.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full bg-[#040a12] text-slate-100">
+      <body className="min-h-dvh bg-[#040a12] text-slate-100">
         {children}
         <LuminousCursor />
       </body>
