@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { getFeatureFlag } from "@/lib/config/feature-flags";
 import { hasSupabase } from "@/lib/config/env";
 import { SportsNavigation } from "@/components/layout/sports-navigation";
+import { LogoutButton } from "@/components/auth/logout-button";
+import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
 
 function dbStatusBadge() {
   const offline = getFeatureFlag("ENABLE_OFFLINE_MODE") === true;
@@ -31,7 +33,29 @@ function dbStatusBadge() {
   );
 }
 
-export function SiteHeader() {
+async function AuthState() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return (
+      <>
+        <Link href="/login" className="inline-flex items-center rounded-lg px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800">Ingresar</Link>
+        <Link href="/register" className="inline-flex items-center rounded-lg px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800">Crear cuenta</Link>
+      </>
+    );
+  }
+  const profile = await getCurrentProfile(user.id);
+  return (
+    <>
+      <span className="max-w-40 truncate text-xs text-slate-500 dark:text-slate-400" title={user.email ?? undefined}>
+        {user.email ?? "Usuario"}
+        {profile?.role === "premium" ? " · Pro" : ""}
+      </span>
+      <LogoutButton />
+    </>
+  );
+}
+
+export async function SiteHeader() {
   const sports = getActiveSports();
   return (
     <header className="sticky top-0 z-40 border-b border-cyan-100/10 bg-[#050d18]/88 backdrop-blur">
@@ -60,6 +84,7 @@ export function SiteHeader() {
         </details>
         <Row className="hidden md:flex" gap="sm">
           {dbStatusBadge()}
+          <AuthState />
           <span className="text-xs text-slate-400">v0.1 · MVP</span>
         </Row>
       </Container>
