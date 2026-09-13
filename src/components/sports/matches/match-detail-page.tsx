@@ -9,10 +9,10 @@ import {
 import { Badge, formatBadgeForStatus } from "@/components/ui/badge";
 import { Container, Stack, Row, Divider } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
-import { TeamFormStrip, MatchProbabilityBar, MatchPointsComparison } from "@/components/charts/svg-charts";
+import { TeamFormStrip, MatchPointsComparison } from "@/components/charts/svg-charts";
+import MatchAiPanels from "@/components/sports/matches/match-ai-panels";
 import type { Match, League, Player, PlayerMatchStats, Team } from "@/types/db/tables";
 import type { SoccerStandingsRow } from "@/sports/soccer/types";
-import type { MatchAnalysisResult, MatchPredictionResult } from "@/types/ai";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -80,8 +80,6 @@ export default function MatchDetailPage({
   home,
   away,
   league,
-  analysis,
-  prediction,
   matchStats,
   standings,
   allSeasonMatches,
@@ -93,8 +91,6 @@ export default function MatchDetailPage({
   home: Team;
   away: Team;
   league?: League;
-  analysis: MatchAnalysisResult;
-  prediction: MatchPredictionResult;
   matchStats: PlayerMatchStats[];
   standings: SoccerStandingsRow[];
   allSeasonMatches: Match[];
@@ -233,17 +229,18 @@ export default function MatchDetailPage({
 
           <section className="match-experimental-zone" aria-labelledby="experimental-modules-title">
             <div className="match-experimental-heading"><span>CAPA EXPERIMENTAL</span><h2 id="experimental-modules-title">Lecturas complementarias</h2><p>Se muestran aparte del marcador y de los datos registrados. Son interpretaciones de las señales disponibles, no resultados oficiales.</p></div>
-            <div className="match-experimental-grid">
-              <Card className="match-panel match-experimental-module match-intelligence-module lg:col-span-2"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">ESTIMACIÓN EXPERIMENTAL</span> Lectura de escenario</CardTitle><CardSubtitle>Basada en señales disponibles; no garantiza un resultado.</CardSubtitle></CardHeader><CardBody>
-                {!predictionAvailable ? <div className="match-empty-state">Datos insuficientes de forma y tabla para calcular una estimación confiable.</div> : <>
-                  <MatchProbabilityBar homeProb={prediction.homeWinProbability} drawProb={prediction.drawProbability} awayProb={prediction.awayWinProbability} homeLabel={`${home.short_name} · Local`} awayLabel={`${away.short_name} · Visita`} />
-                  <div className="match-prediction-score"><span>Marcador estimado</span><strong>{prediction.predictedHomeScore} - {prediction.predictedAwayScore}</strong></div>
-                  <p className="match-disclaimer">{prediction.explanation}</p>
-                </>}
-              </CardBody></Card>
+<div className="match-experimental-grid">
+              <MatchAiPanels
+                sport={sport}
+                matchId={match.id}
+                leagueId={match.league_id}
+                seasonId={match.season_id}
+                predictionAvailable={predictionAvailable}
+                homeShort={home.short_name}
+                awayShort={away.short_name}
+              />
               <Card className="match-panel match-experimental-module match-signal-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SEÑALES</span> Cobertura disponible</CardTitle><CardSubtitle>Datos que alimentan esta lectura</CardSubtitle></CardHeader><CardBody><div className="match-signal-list">{dataSignals.length ? dataSignals.map((signal) => <div key={signal}><span>+</span>{signal}</div>) : <div className="match-empty-state">No hay señales suficientes registradas.</div>}<div><span>·</span> Tiros, córners y posesión en directo cuando la fuente los entregue</div></div></CardBody></Card>
             </div>
-            <Card className="match-panel match-experimental-module match-report-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">LECTURA COMPLEMENTARIA</span> Radiografía del partido</CardTitle><CardSubtitle>Análisis basado exclusivamente en el historial y los datos disponibles.</CardSubtitle></CardHeader><CardBody><div className="match-report-grid"><div><span className="match-report-label">Lectura del sistema</span><p>{analysis.summary}</p><p>{analysis.narrative}</p></div><div><span className="match-report-label">Factores considerados</span><ul>{analysis.keyInsights.map((insight, index) => <li key={`${insight}-${index}`}>{insight}</li>)}</ul></div></div></CardBody></Card>
           </section>
 
           <section className="match-future-grid"><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> DT vs DT</CardTitle><CardSubtitle>Historial de entrenadores</CardSubtitle></CardHeader><CardBody><div className="match-empty-state">Disponible cuando exista una fuente con entrenadores, enfrentamientos y resultados históricos.</div></CardBody></Card><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> Modelo Sports AI</CardTitle><CardSubtitle>Arquitectura de modelos futuros</CardSubtitle></CardHeader><CardBody><div className="match-model-list"><span>Modelo estadístico <b>Próximamente</b></span><span>Modelo de forma <b>Próximamente</b></span><span>Modelo ofensivo <b>Próximamente</b></span><span>Modelo defensivo <b>Próximamente</b></span></div></CardBody></Card></section>

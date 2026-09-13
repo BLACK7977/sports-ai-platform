@@ -8,8 +8,6 @@ import { getLeagueById } from "@/lib/db/repositories/leagues-repo";
 import { getStatsByMatchId } from "@/lib/db/repositories/player-stats-repo";
 import { getPlayerById } from "@/lib/db/repositories/players-repo";
 import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statistics-service";
-import { generateMatchAnalysis, predictMatch } from "@/lib/services/ai-service";
-import { actionAnalyzeMatch, actionPredictMatch } from "./actions";
 import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
 export default async function MatchDetailRoute({
@@ -36,18 +34,12 @@ export default async function MatchDetailRoute({
   const leagueId = match.league_id;
   const seasonId = match.season_id;
 
-  const [matchStats, analysisResult, predictionResult, standings, allSeasonMatches, squadRanking] =
+  // El análisis y la predicción AI se generan SOLO on-demand desde
+  // componentes client (botones), nunca en el SSR de esta página:
+  // así no se consumen tokens de OpenAI por cada request/render.
+  const [matchStats, standings, allSeasonMatches, squadRanking] =
     await Promise.all([
       getStatsByMatchId(id),
-      Promise.resolve(actionAnalyzeMatch(sport, id)).then(
-        (x) =>
-          (x.ok && x.data) || generateMatchAnalysis(sport, id),
-      ),
-      Promise.resolve(actionPredictMatch(sport, leagueId, seasonId, id)).then(
-        (x) =>
-          (x.ok && x.data) ||
-          predictMatch(sport, leagueId, seasonId, id),
-      ),
       getTeamStandings(sport, leagueId, seasonId),
       getMatchesByLeagueSeason(leagueId, seasonId),
       getPlayerSeasonRanking(sport, leagueId, seasonId),
@@ -72,8 +64,6 @@ export default async function MatchDetailRoute({
       home={home}
       away={away}
       league={league ?? undefined}
-      analysis={analysisResult}
-      prediction={predictionResult}
       matchStats={matchStats}
       standings={standings}
       allSeasonMatches={allSeasonMatches}

@@ -1,6 +1,13 @@
 import type { Match, Team, Player } from "@/types/db/tables";
 import type { SoccerStandingsRow } from "@/types/core/stats";
 
+/** Limita el blob libre (sport_specific) para evitar prompts gigantes. */
+function truncateBlob(value: unknown, max = 1500): string {
+  const text = JSON.stringify(value, null, 2);
+  if (!text || text.length <= max) return text ?? "{}";
+  return `${text.slice(0, max)}\n... (truncado: ${text.length - max} chars omitidos)`;
+}
+
 export function buildSoccerMatchAnalysisPrompt(params: {
   match: Match;
   home: Team;
@@ -68,7 +75,7 @@ JUGADORES DESTACADOS VISITA (${away.name}):
 ${fmtPlayers(awayPlayers)}
 
 DATOS ESPECÍFICOS DEL PARTIDO (sport_specific):
-${JSON.stringify(match.sport_specific, null, 2)}
+${truncateBlob(match.sport_specific)}
 
 Genera tu análisis en JSON ahora.`;
 

@@ -13,8 +13,6 @@ import {
   getPlayerCareerStats,
   getPlayerSeasonRanking,
 } from "@/lib/services/statistics-service";
-import { generatePlayerReport } from "@/lib/services/ai-service";
-import { actionGeneratePlayerReport } from "./actions";
 import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
 export default async function PlayerDetailRoute({
@@ -41,14 +39,8 @@ export default async function PlayerDetailRoute({
   ]);
   const seasonAgg = seasonRank.find((r) => r.playerId === id) ?? null;
 
-  const report = await Promise.resolve(
-    actionGeneratePlayerReport(sport, leagueId, seasonId, id),
-  ).then(
-    (x) =>
-      (x.ok && x.data) ||
-      generatePlayerReport(sport, leagueId, seasonId, id),
-  );
-
+  // El informe AI se genera SOLO on-demand desde un componente client,
+  // nunca en el SSR de esta página.
   return (
     <PlayerDetailPage
       sport={sport}
@@ -59,7 +51,6 @@ export default async function PlayerDetailRoute({
       team={team}
       seasonAgg={seasonAgg}
       careerStats={careerStats}
-      report={report}
       allSeasonRank={seasonRank}
     />
   );

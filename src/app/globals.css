@@ -432,6 +432,29 @@ body {
   }
 }
 
+/* AI on-demand panels (phase 3) */
+.match-ai-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+.match-ai-cta p {
+  color: #a4bccb;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.match-ai-error::before {
+  content: "// ERROR";
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.08);
+  border: 1px solid rgba(251, 113, 133, 0.25);
+}
+.match-ai-error {
+  margin-top: 0.9rem;
+  color: #fda4af;
+}
+
 /* Comparison module */
 .match-comparison {
   display: grid;

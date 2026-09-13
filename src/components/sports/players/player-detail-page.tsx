@@ -5,10 +5,9 @@ import {
   CardHeader,
   CardTitle,
   CardSubtitle,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Container, Stack, Row, Divider } from "@/components/ui/container";
+import { Container, Stack, Row } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
 import {
   DataTable,
@@ -20,9 +19,9 @@ import {
   EmptyRow,
 } from "@/components/ui/table";
 import { PlayerStatsRadar, MiniGauge } from "@/components/charts/svg-charts";
+import PlayerReportPanel from "@/components/sports/players/player-report-panel";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import type { Player, Team } from "@/types/db/tables";
-import type { PlayerInsightResult } from "@/types/ai";
 import type { SoccerPlayerSeasonAggregate } from "@/sports/soccer/types";
 
 function jerseyColor(teamId: string) {
@@ -59,7 +58,6 @@ export default async function PlayerDetailPage({
   team,
   seasonAgg,
   careerStats,
-  report,
   allSeasonRank,
 }: {
   sport: string;
@@ -74,7 +72,6 @@ export default async function PlayerDetailPage({
       typeof import("@/lib/services/statistics-service").getPlayerCareerStats
     >
   >;
-  report: PlayerInsightResult;
   allSeasonRank: SoccerPlayerSeasonAggregate[];
 }) {
   const has = getHasSport(sport);
@@ -115,7 +112,7 @@ export default async function PlayerDetailPage({
     Math.round(((tacklesEst ?? 0) / maxTackles) * 100),
     Math.min(100, Math.round(((rating ?? 0) / maxRating) * 100)),
   ];
-  const radarLabels = [
+const radarLabels = [
     "Goles",
     "Asistencias",
     "Prec. Pase",
@@ -123,9 +120,6 @@ export default async function PlayerDetailPage({
     "Recuperos",
     "Rating",
   ];
-
-  void leagueId;
-  void seasonId;
 
   return (
     <Container size="wide" className="product-page player-detail-page">
@@ -300,69 +294,12 @@ export default async function PlayerDetailPage({
             </CardBody>
           </Card>
 
-          <Card className="product-panel">
-            <CardHeader>
-              <CardTitle>Reporte con IA</CardTitle>
-              <CardSubtitle>
-                Fortalezas, debilidades y perspectiva
-              </CardSubtitle>
-            </CardHeader>
-            <CardBody>
-              <Stack gap="md">
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-xl p-4">
-                  <div className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 font-bold mb-2">
-                    Fortalezas
-                  </div>
-                  {report.strengths && report.strengths.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-emerald-900 dark:text-emerald-100">
-                      {report.strengths.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-emerald-700/70">
-                      No disponible.
-                    </p>
-                  )}
-                </div>
-                <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 rounded-xl p-4">
-                  <div className="text-xs uppercase tracking-wider text-rose-700 dark:text-rose-300 font-bold mb-2">
-                    Debilidades
-                  </div>
-                  {report.weaknesses && report.weaknesses.length > 0 ? (
-                    <ul className="list-disc pl-5 space-y-1 text-sm text-rose-900 dark:text-rose-100">
-                      {report.weaknesses.map((w, i) => (
-                        <li key={i}>{w}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-rose-700/70">
-                      No disponible.
-                    </p>
-                  )}
-                </div>
-              </Stack>
-            </CardBody>
-            <CardFooter className="flex-col items-start gap-2 border-t border-slate-200 dark:border-slate-800 !py-4">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">
-                  Resumen de rendimiento
-                </div>
-                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {report.performanceSummary || "No disponible."}
-                </p>
-              </div>
-              <Divider />
-              <div>
-                <div className="text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-300 font-bold mb-1">
-                  Perspectiva
-                </div>
-                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {report.outlook || "No disponible."}
-                </p>
-              </div>
-            </CardFooter>
-          </Card>
+<PlayerReportPanel
+            sport={sport}
+            leagueId={leagueId}
+            seasonId={seasonId}
+            playerId={player.id}
+          />
         </div>
 
         <Card className="product-panel">

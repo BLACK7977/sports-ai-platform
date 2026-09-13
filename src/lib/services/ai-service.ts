@@ -11,7 +11,11 @@ import {
   getLlmProvider,
   getCachedAiResult,
   setCachedAiResult,
+  dedupeAiRequest,
 } from "@/lib/ai/factory";
+import {
+  resolveProviderForFeature,
+} from "@/lib/ai/ai-guard";
 import {
   buildSoccerMatchAnalysisPrompt,
   buildSoccerMatchPredictionPrompt,
@@ -58,19 +62,78 @@ function safeJsonParse<T>(
   }
 }
 
+/** TTL por tipo de feature AI (resultados basados en datos que cambian). */
+const AI_FEATURE_TTL_MS: Record<string, number> = {
+  analysis: 10 * 60_000,
+  prediction: 5 * 60_000,
+  player: 15 * 60_000,
+};
+
+function cacheActionOf(cacheKey: string): string {
+  return cacheKey.split("|")[1] ?? "unknown";
+}
+
+// ============================================================================
+// POLÍTICA DE ORDEN POR REQUEST AI (decidida explícitamente en fase 3):
+//
+//   A) RATE LIMIT   — en la Server Action, ANTES de cache/DB/generación
+//   B) CACHE        — getCachedAiResult: cache hit ⇒ 0 llamadas al provider
+//   C) DEDUPE       — dedupeAiRequest: N concurrentes idénticas ⇒ 1 generación
+//   D) GENERACIÓN   — resolveProviderForFeature + provider.chat
+//
+// Por qué A va ANTES de B (el diseño elegido):
+//  - Cache hit NO genera costo de OpenAI (objetivo 1).
+//  - Pero un cache hit SÍ consume 1 token del rate limiter (objetivo 2):
+//    nadie puede pedir la misma página en bucle infinito y generar carga
+//    gratuita sin costo. Con los límites actuales (3/min, 20/hora) un
+//    usuario normal jamás los roza.
+// Los errores NUNCA quedan cacheados: si produce() lanza, la excepción
+// propaga y no se escribe entrada.
+// ============================================================================
+
+/**
+ * Cache + deduplicación concurrente. Primero cache (hit/miss), luego comparte
+ * la misma promesa entre requests simultáneos con la misma key. Nunca cachea
+ * errores: si produce() lanza, la excepción se propaga y no hay entrada.
+ */
+export async function runCachedAi<T>(
+  cacheKey: string,
+  produce: () => Promise<T>,
+): Promise<T> {
+  const action = cacheActionOf(cacheKey);
+  const ttlMs =
+    AI_FEATURE_TTL_MS[action] ?? (10 * 60_000);
+  const cached = getCachedAiResult<T>(cacheKey);
+  if (cached) {
+    console.log(`[AI] cache action=${action} hit=true providerN/A`);
+    return cached;
+  }
+  console.log(`[AI] cache action=${action} hit=false`);
+  return dedupeAiRequest(cacheKey, async () => {
+    const value = await produce();
+    setCachedAiResult(cacheKey, value, ttlMs);
+    return value;
+  });
+}
+
 async function chatWithFallback(
   providerHint: "mock" | "openai" | undefined,
+  feature: string,
   messages: ChatMessage[],
   options: ChatOptions,
 ): Promise<string> {
-  const provider = getLlmProvider(providerHint);
+  const provider = resolveProviderForFeature(providerHint);
+  console.log(`[AI] provider=${provider.id} feature=${feature}`);
   try {
     return await provider.chat(messages, options);
   } catch (error) {
     if (provider.id === "mock") throw error;
+    // Nunca se presentan prompts ni respuestas en logs.
     console.warn(
-      `[AI] ${provider.name} failed; falling back to Mock LLM: ${error instanceof Error ? error.message : String(error)}`,
+      `[AI] feature=${feature} provider=${provider.id} failed: ${error instanceof Error ? error.message : String(error)}`,
     );
+    if (process.env.NODE_ENV === "production") throw error;
+    console.warn(`[AI] feature=${feature} falling back to mock (dev only)`);
     return getLlmProvider("mock").chat(messages, options);
   }
 }
@@ -142,35 +205,39 @@ export async function generateMatchAnalysis(
   matchId: string,
   providerHint?: "mock" | "openai",
 ): Promise<MatchAnalysisResult> {
-  const cacheKey = hashCacheKey(["ai", "analysis", sportId, matchId]);
-  const cached = getCachedAiResult<MatchAnalysisResult>(cacheKey);
-  if (cached) return cached;
-
-  const match = await getMatchById(matchId);
-  if (!match) {
-    const empty: MatchAnalysisResult = {
-      matchId,
-      summary: "Partido no encontrado.",
-      keyInsights: [],
-      narrative: "",
-    };
-    return setCachedAiResult(cacheKey, empty);
-  }
-
-  const [home, away, statsForMatch] = await Promise.all([
-    getTeamById(match.home_team_id),
-    getTeamById(match.away_team_id),
-    getStatsByMatchId(matchId),
+  const cacheKey = hashCacheKey([
+    "ai",
+    "analysis",
+    sportId,
+    matchId,
+    providerHint ?? "auto",
   ]);
-  if (!home || !away) {
-    const empty: MatchAnalysisResult = {
-      matchId,
-      summary: "Datos de equipos incompletos para análisis.",
-      keyInsights: [],
-      narrative: "",
-    };
-    return setCachedAiResult(cacheKey, empty);
-  }
+  return runCachedAi(cacheKey, async () => {
+    const match = await getMatchById(matchId);
+    if (!match) {
+      const empty: MatchAnalysisResult = {
+        matchId,
+        summary: "Partido no encontrado.",
+        keyInsights: [],
+        narrative: "",
+      };
+      return empty;
+    }
+
+    const [home, away, statsForMatch] = await Promise.all([
+      getTeamById(match.home_team_id),
+      getTeamById(match.away_team_id),
+      getStatsByMatchId(matchId),
+    ]);
+    if (!home || !away) {
+      const empty: MatchAnalysisResult = {
+        matchId,
+        summary: "Datos de equipos incompletos para análisis.",
+        keyInsights: [],
+        narrative: "",
+      };
+      return empty;
+    }
 
   const agg = collectGoalAssistRating(statsForMatch);
   const idsOrder = [...new Set(statsForMatch.map((s) => s.player_id))];
@@ -230,6 +297,7 @@ export async function generateMatchAnalysis(
 
   const text = await chatWithFallback(
     providerHint,
+    "analysis",
     [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -249,7 +317,8 @@ export async function generateMatchAnalysis(
     keyInsights: Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [],
     narrative: parsed.narrative ?? "",
   };
-  return setCachedAiResult(cacheKey, result);
+  return result;
+  });
 }
 
 export async function predictMatch(
@@ -266,10 +335,9 @@ export async function predictMatch(
     leagueId,
     seasonId,
     matchId,
+    providerHint ?? "auto",
   ]);
-  const cached = getCachedAiResult<MatchPredictionResult>(cacheKey);
-  if (cached) return cached;
-
+  return runCachedAi(cacheKey, async () => {
   const rawMatch = await getMatchById(matchId);
   const standings = await getTeamStandings(sportId, leagueId, seasonId);
 
@@ -348,6 +416,7 @@ export async function predictMatch(
 
   const text = await chatWithFallback(
     providerHint,
+    "prediction",
     [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -409,7 +478,8 @@ export async function predictMatch(
         ? parsed.explanation
         : "Pronóstico basado en forma reciente y H2H.",
   };
-  return setCachedAiResult(cacheKey, result);
+  return result;
+  });
 }
 
 export async function generatePlayerReport(
@@ -426,10 +496,9 @@ export async function generatePlayerReport(
     leagueId,
     seasonId,
     playerId,
+    providerHint ?? "auto",
   ]);
-  const cached = getCachedAiResult<PlayerInsightResult>(cacheKey);
-  if (cached) return cached;
-
+  return runCachedAi(cacheKey, async () => {
   const [player, seasonRanking, career] = await Promise.all([
     getPlayerById(playerId),
     getPlayerSeasonRanking(sportId, leagueId, seasonId),
@@ -505,6 +574,7 @@ export async function generatePlayerReport(
 
   const text = await chatWithFallback(
     providerHint,
+    "player",
     [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -528,5 +598,6 @@ export async function generatePlayerReport(
       `Temporada: ${agg.matchesPlayed} partidos, ${agg.goals}G ${agg.assists}A.`,
     outlook: parsed.outlook ?? "Mantener regularidad.",
   };
-  return setCachedAiResult(cacheKey, result);
+  return result;
+  });
 }
