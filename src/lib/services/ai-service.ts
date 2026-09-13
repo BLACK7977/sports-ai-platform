@@ -22,8 +22,8 @@ import {
   buildSoccerPlayerReportPrompt,
 } from "@/lib/ai/prompts/soccer-prompts";
 import { getMatchById, getMatchesByTeamId } from "@/lib/db/repositories/matches-repo";
-import { getTeamById } from "@/lib/db/repositories/teams-repo";
-import { getPlayerById } from "@/lib/db/repositories/players-repo";
+import { getTeamById, getTeamsByIds } from "@/lib/db/repositories/teams-repo";
+import { getPlayersByIds, getPlayerById } from "@/lib/db/repositories/players-repo";
 import {
   getStatsByMatchId,
 } from "@/lib/db/repositories/player-stats-repo";
@@ -242,11 +242,11 @@ export async function generateMatchAnalysis(
   const agg = collectGoalAssistRating(statsForMatch);
   const idsOrder = [...new Set(statsForMatch.map((s) => s.player_id))];
   const [allPlayers, homeMatches, awayMatches] = await Promise.all([
-    Promise.all(idsOrder.map((id) => getPlayerById(id))),
+    getPlayersByIds(idsOrder),
     getMatchesByTeamId(home.id),
     getMatchesByTeamId(away.id),
   ]);
-  const byId = new Map(allPlayers.filter(Boolean).map((p) => [p!.id, p!]));
+  const byId = new Map(allPlayers.filter(Boolean).map((p) => [p.id, p]));
   const buildPlayerList = (teamId: string) =>
     statsForMatch
       .filter((s) => s.team_id === teamId)
@@ -382,17 +382,23 @@ export async function predictMatch(
       )
       .sort((a, b) => (a.match_date < b.match_date ? 1 : -1))
       .slice(0, 5);
+    const h2hTeamIds = [...new Set(
+      finished.flatMap((m) => [m.home_team_id, m.away_team_id])
+        .filter((tid) => tid !== home.id && tid !== away.id),
+    )];
+    const h2hTeams = h2hTeamIds.length > 0 ? await getTeamsByIds(h2hTeamIds) : [];
+    const h2hTeamMap = new Map(h2hTeams.map((t) => [t.id, t]));
     for (const m of finished) {
       h2h.push({
         date: m.match_date,
         homeName:
           m.home_team_id === home.id
             ? home.name
-            : (await getTeamById(m.home_team_id))?.name ?? m.home_team_id,
+            : h2hTeamMap.get(m.home_team_id)?.name ?? m.home_team_id,
         awayName:
           m.away_team_id === away.id
             ? away.name
-            : (await getTeamById(m.away_team_id))?.name ?? m.away_team_id,
+            : h2hTeamMap.get(m.away_team_id)?.name ?? m.away_team_id,
         hs: m.home_score ?? 0,
         as: m.away_score ?? 0,
       });

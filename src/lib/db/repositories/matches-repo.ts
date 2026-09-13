@@ -86,10 +86,12 @@ export async function getMatchesByLeagueSeasonStatuses(
 
 export async function getMatchesByTeamId(teamId: string): Promise<Match[]> {
   const db = await ensureDbReady();
-  const { data } = await db.from<Match>("matches").order("match_date", "desc").select();
-  return data.filter(
-    (m) => m.home_team_id === teamId || m.away_team_id === teamId,
-  );
+  const { data } = await db
+    .from<Match>("matches")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .order("match_date", "desc")
+    .select();
+  return data;
 }
 
 export async function getMatchesBySportId(sportId: string): Promise<Match[]> {

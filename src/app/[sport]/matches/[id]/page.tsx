@@ -6,7 +6,7 @@ import { getMatchById, getMatchesByLeagueSeason } from "@/lib/db/repositories/ma
 import { getTeamById } from "@/lib/db/repositories/teams-repo";
 import { getLeagueById } from "@/lib/db/repositories/leagues-repo";
 import { getStatsByMatchId } from "@/lib/db/repositories/player-stats-repo";
-import { getPlayerById } from "@/lib/db/repositories/players-repo";
+import { getPlayersByIds } from "@/lib/db/repositories/players-repo";
 import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statistics-service";
 import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
@@ -45,16 +45,10 @@ export default async function MatchDetailRoute({
       getPlayerSeasonRanking(sport, leagueId, seasonId),
     ]);
 
-  const allPlayerIds = new Set([...matchStats.map((s) => s.player_id), ...squadRanking.map((player) => player.playerId)]);
-  const players = await Promise.all(
-    [...allPlayerIds].map((pid) => getPlayerById(pid)),
-  );
+  const allPlayerIds = [...new Set([...matchStats.map((s) => s.player_id), ...squadRanking.map((player) => player.playerId)])];
+  const players = await getPlayersByIds(allPlayerIds);
   const playerMap = new Map(
-    players
-      .filter(
-        (p): p is NonNullable<(typeof players)[number]> => p != null,
-      )
-      .map((p) => [p.id, p]),
+    players.map((p) => [p.id, p]),
   );
 
   return (

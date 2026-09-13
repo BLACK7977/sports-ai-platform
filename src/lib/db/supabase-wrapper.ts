@@ -23,6 +23,7 @@ type AnyInsert = SportInsert | LeagueInsert | SeasonInsert | TeamInsert | Player
 export interface QueryBuilder<T> {
   eq<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   in<K extends keyof T>(key: K, values: T[K][]): QueryBuilder<T>;
+  or(filter: string): QueryBuilder<T>;
   gte<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   lte<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   order<K extends keyof T>(key: K, dir?: OrderDir): QueryBuilder<T>;
@@ -45,7 +46,7 @@ export interface DbClient {
 function buildQueryBuilder<T extends AnyRow>(
   sb: SupabaseClient, table: TableName): QueryBuilder<T> {
   type K = keyof T;
-  const chain: Array<{op: "eq" | "in" | "gte" | "lte"; key: K; value: unknown}> = [];
+  const chain: Array<{op: "eq" | "in" | "gte" | "lte"; key: K; value: unknown} | {op: "or"; filter: string}> = [];
   let orderKey: K | null = null;
   let orderDir: OrderDir = "asc";
   let limitN: number | null = null;
@@ -58,6 +59,7 @@ function buildQueryBuilder<T extends AnyRow>(
     for (const c of chain) {
       if (c.op === "eq") q = q.eq(c.key as string, c.value);
       else if (c.op === "in") q = q.in(c.key as string, c.value);
+      else if (c.op === "or") q = q.or(c.filter);
       else if (c.op === "gte") q = q.gte(c.key as string, c.value);
       else if (c.op === "lte") q = q.lte(c.key as string, c.value);
     }
@@ -70,6 +72,7 @@ function buildQueryBuilder<T extends AnyRow>(
   const builder: QueryBuilder<T> = {
     eq: (k, v) => { chain.push({ op: "eq", key: k, value: v }); return builder; },
     in: (k, v) => { chain.push({ op: "in", key: k, value: v }); return builder; },
+    or: (filter) => { chain.push({ op: "or", filter }); return builder; },
     gte: (k, v) => { chain.push({ op: "gte", key: k, value: v }); return builder; },
     lte: (k, v) => { chain.push({ op: "lte", key: k, value: v }); return builder; },
     order: (k, d = "asc") => { orderKey = k; orderDir = d; return builder; },

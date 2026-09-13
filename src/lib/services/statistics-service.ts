@@ -170,15 +170,11 @@ export async function getPlayerCareerStats(
   let ratingCount = 0;
 
   const matchIds = new Set(stats.map((s) => s.match_id));
-  const { getMatchesByTeamId, getMatchById } = await import(
+  const { getMatchesByIds } = await import(
     "@/lib/db/repositories/matches-repo"
   );
-  const matchMap = new Map<string, Match>();
-  for (const mid of matchIds) {
-    const m = await getMatchById(mid);
-    if (m) matchMap.set(mid, m as Match);
-  }
-  void getMatchesByTeamId;
+  const matchArr = await getMatchesByIds([...matchIds]);
+  const matchMap = new Map<string, Match>(matchArr.map((m) => [m.id, m as Match]));
 
   const perMatch = stats.map((s) => {
     const sp = (s.sport_specific ?? {}) as Record<string, unknown>;
