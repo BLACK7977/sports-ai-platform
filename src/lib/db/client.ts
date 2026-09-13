@@ -1,5 +1,4 @@
-// Server-only enforcement: Next.js RSC/Server Actions import env.ts first and trigger the guard.
-import "@/lib/config/env";
+import "server-only";
 import type { SportId } from "@/types/core/sport";
 import type {
   SportInsert,

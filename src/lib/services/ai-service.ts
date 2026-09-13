@@ -1,5 +1,4 @@
-// Server-only enforcement
-import "@/lib/config/env";
+import "server-only";
 import type { SportId } from "@/types/core/sport";
 import type {
   ChatMessage,

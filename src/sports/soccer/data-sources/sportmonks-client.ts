@@ -1,4 +1,4 @@
-import "@/lib/config/env";
+import "server-only";
 import { getEnv } from "@/lib/config/env";
 
 const DEFAULT_BASE_URL = "https://api.sportmonks.com/v3/football";

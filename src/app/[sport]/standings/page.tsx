@@ -4,6 +4,7 @@ import { getHasSport, formatLeagueName, formatSeasonName } from "@/components/sp
 import { ensureDbReady } from "@/lib/db/client";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamStandings } from "@/lib/services/statistics-service";
+import { parseSportId } from "@/lib/config/validation";
 
 export default async function StandingsRoute({
   params,
@@ -11,6 +12,7 @@ export default async function StandingsRoute({
   params: Promise<{ sport: string }>;
 }) {
   const { sport } = await params;
+  if (!parseSportId(sport)) notFound();
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();

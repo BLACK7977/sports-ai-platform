@@ -1,64 +1,64 @@
-// Equivalente a import "server-only" para entornos donde server-only no es un módulo real (tsx standalone).
-// En Next.js RSC/Servidor el check nunca falla porque __NEXT_IS_SERVER existe y es true.
-// En cliente o scripts standalone (tsx) también pasa → este archivo es para server pero permitimos ejecución en tsx
-// para smoke tests. Si alguna vez querés hardcodeado estricto, volvé a import "server-only" + server-only package.
-declare const __NEXT_IS_SERVER: boolean | undefined;
-try {
-  if (typeof __NEXT_IS_SERVER !== "undefined" && !__NEXT_IS_SERVER) {
-    throw new Error("server-only: this module must be imported in a Server context.");
-  }
-} catch {
-  /* ignore */
+import "server-only";
+import { z } from "zod";
+
+// Convierte strings vacíos / solo espacios en `undefined` para tratar la
+// ausencia igual que el vacío. Las keys opcionales pueden faltar sin error;
+// las obligatorias no.
+function cleanOptional(value: unknown): string | undefined {
+  if (typeof value !== "string") return value as undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
-import { z } from "zod";
+const optionalString = z.preprocess(cleanOptional, z.string().optional());
+const requiredString = z.preprocess(
+  cleanOptional,
+  z.string().min(1, "requerida"),
+);
+const optionalUrl = z.preprocess(cleanOptional, z.string().url().optional());
+const requiredUrl = z.preprocess(
+  cleanOptional,
+  z.string().url("debe ser una URL válida"),
+);
+
+const booleanFromString = (value: unknown) =>
+  typeof value === "string" ? value.toLowerCase() === "true" : value;
 
 const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().url().optional(),
-  ),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().optional(),
-  ),
-  SUPABASE_SERVICE_ROLE_KEY: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().optional(),
-  ),
-  SPORTMONKS_API_TOKEN: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().optional(),
-  ),
-  SPORTMONKS_BASE_URL: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().url().optional(),
-  ),
+  // OBLIGATORIAS para funcionamiento normal (Supabase cloud).
+  NEXT_PUBLIC_SUPABASE_URL: requiredUrl,
+  SUPABASE_SERVICE_ROLE_KEY: requiredString,
 
-  OPENAI_API_KEY: z.preprocess(
-    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
-    z.string().optional(),
-  ),
+  // OPCIONALES / por feature. La app sigue funcionando sin ellas:
+  // sin OpenAI usa Mock LLM, sin Sportmonks no hay sync del proveedor.
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalString,
+  SPORTMONKS_API_TOKEN: optionalString,
+  SPORTMONKS_BASE_URL: optionalUrl,
+  OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
 
-  ENABLE_OFFLINE_MODE: z.preprocess(
-    (v) => (typeof v === "string" ? v.toLowerCase() === "true" : v),
-    z.boolean().default(false),
-  ),
-  USE_LLM_MOCK: z.preprocess(
-    (v) => (typeof v === "string" ? v.toLowerCase() === "true" : v),
-    z.boolean().default(false),
-  ),
+  ENABLE_OFFLINE_MODE: z
+    .preprocess(booleanFromString, z.boolean().default(false)),
+  USE_LLM_MOCK: z.preprocess(booleanFromString, z.boolean().default(false)),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
 let cachedEnv: Env | null = null;
 let cachedParseError: z.ZodError | null = null;
+
+/** Versión tolerante para hasSupabase()/feature-flags: false en vez de throw. */
+function selfHealingParse(): { ok: true; value: Env } | { ok: false } {
+  try {
+    return { ok: true, value: parseEnv() };
+  } catch {
+    return { ok: false };
+  }
+}
 
 function parseEnv(): Env {
   if (cachedEnv) return cachedEnv;
@@ -86,13 +86,20 @@ function parseEnv(): Env {
   return cachedEnv;
 }
 
+/**
+ * Errores sin valores de variables: solo nombre + motivo. Nunca se incluye
+ * el contenido de una key en mensajes. Las URLs inválidas se muestran como
+ * "debe ser una URL válida" sin la URL original.
+ */
 function buildEnvError(err: z.ZodError): Error {
   const issues = err.issues
     .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
     .join("\n");
   return new Error(
-    `[env.ts] Invalid environment variables:\n${issues}\n\n` +
-      `Copy .env.example to .env.local and fill in the required values.`,
+    `[env.ts] configuración de entorno inválida:\n${issues}\n\n` +
+      `OBLIGATORIAS: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.\n` +
+      `Opcionales (por feature): SPORTMONKS_API_TOKEN, SPORTMONKS_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL, NEXT_PUBLIC_SUPABASE_ANON_KEY.\n` +
+      `Copiá .env.example a .env.local y completá los valores requeridos.`,
   );
 }
 
@@ -101,12 +108,10 @@ export function getEnv(): Env {
 }
 
 export function hasSupabase(): boolean {
-  try {
-    const e = getEnv();
-    return Boolean(e.NEXT_PUBLIC_SUPABASE_URL && e.SUPABASE_SERVICE_ROLE_KEY);
-  } catch {
-    return false;
-  }
+  const result = selfHealingParse();
+  if (!result.ok) return false;
+  const e = result.value;
+  return Boolean(e.NEXT_PUBLIC_SUPABASE_URL && e.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 /**
@@ -120,18 +125,11 @@ export function getSupabaseProjectUrl(): string | undefined {
 }
 
 export function hasOpenAI(): boolean {
-  try {
-    const e = getEnv();
-    return Boolean(e.OPENAI_API_KEY);
-  } catch {
-    return false;
-  }
+  const result = selfHealingParse();
+  return result.ok && Boolean(result.value.OPENAI_API_KEY);
 }
 
 export function hasSportmonks(): boolean {
-  try {
-    return Boolean(getEnv().SPORTMONKS_API_TOKEN);
-  } catch {
-    return false;
-  }
+  const result = selfHealingParse();
+  return result.ok && Boolean(result.value.SPORTMONKS_API_TOKEN);
 }

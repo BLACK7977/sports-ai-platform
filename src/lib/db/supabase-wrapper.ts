@@ -1,5 +1,4 @@
-// Server-only enforcement
-import "@/lib/config/env";
+import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   Sport, League, Season, Team, Player, Match, PlayerMatchStats, SportInsert, LeagueInsert, SeasonInsert, TeamInsert, PlayerInsert, MatchInsert, PlayerMatchStatsInsert } from "@/types/db/tables";

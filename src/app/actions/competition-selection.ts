@@ -5,14 +5,18 @@ import {
   competitionSelectionCookie,
   isValidCompetitionSelection,
 } from "@/lib/db/repositories/active-competition-repo";
+import { competitionSelectionSchema } from "@/lib/config/validation";
 
 export async function selectCompetitionAction(formData: FormData): Promise<void> {
-  const sportId = String(formData.get("sportId") ?? "");
-  const leagueId = String(formData.get("leagueId") ?? "");
-  const seasonId = String(formData.get("seasonId") ?? "");
-  if (!sportId || !leagueId || !seasonId) {
+  const parsed = competitionSelectionSchema.safeParse({
+    sportId: formData.get("sportId"),
+    leagueId: formData.get("leagueId"),
+    seasonId: formData.get("seasonId"),
+  });
+  if (!parsed.success) {
     throw new Error("La competición seleccionada no es válida.");
   }
+  const { sportId, leagueId, seasonId } = parsed.data;
   if (!(await isValidCompetitionSelection(sportId, leagueId, seasonId))) {
     throw new Error("La competición seleccionada no está disponible.");
   }

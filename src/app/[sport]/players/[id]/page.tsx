@@ -15,6 +15,7 @@ import {
 } from "@/lib/services/statistics-service";
 import { generatePlayerReport } from "@/lib/services/ai-service";
 import { actionGeneratePlayerReport } from "./actions";
+import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
 export default async function PlayerDetailRoute({
   params,
@@ -22,6 +23,7 @@ export default async function PlayerDetailRoute({
   params: Promise<{ sport: string; id: string }>;
 }) {
   const { sport, id } = await params;
+  if (!parseSportId(sport) || !parseEntityId(id)) notFound();
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();

@@ -5,6 +5,7 @@ import { ensureDbReady } from "@/lib/db/client";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamsByLeagueId } from "@/lib/db/repositories/teams-repo";
 import { getPlayersByTeamId } from "@/lib/db/repositories/players-repo";
+import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
 export default async function PlayersListRoute({
   params,
@@ -14,7 +15,9 @@ export default async function PlayersListRoute({
   searchParams: Promise<{ team?: string }>;
 }) {
   const { sport } = await params;
-  const { team: requestedTeamId } = await searchParams;
+  if (!parseSportId(sport)) notFound();
+  const { team: rawTeamId } = await searchParams;
+  const requestedTeamId = rawTeamId ? parseEntityId(rawTeamId) ?? undefined : undefined;
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();

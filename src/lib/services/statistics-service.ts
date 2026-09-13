@@ -1,5 +1,4 @@
-// Server-only enforcement
-import "@/lib/config/env";
+import "server-only";
 import { getSportOrThrow } from "@/lib/config/sports-registry";
 import type { SportId } from "@/types/core/sport";
 import { getMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";

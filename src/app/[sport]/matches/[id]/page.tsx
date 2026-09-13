@@ -10,6 +10,7 @@ import { getPlayerById } from "@/lib/db/repositories/players-repo";
 import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statistics-service";
 import { generateMatchAnalysis, predictMatch } from "@/lib/services/ai-service";
 import { actionAnalyzeMatch, actionPredictMatch } from "./actions";
+import { parseSportId, parseEntityId } from "@/lib/config/validation";
 
 export default async function MatchDetailRoute({
   params,
@@ -17,6 +18,7 @@ export default async function MatchDetailRoute({
   params: Promise<{ sport: string; id: string }>;
 }) {
   const { sport, id } = await params;
+  if (!parseSportId(sport) || !parseEntityId(id)) notFound();
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();

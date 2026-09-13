@@ -8,6 +8,7 @@ import {
 import { ensureDbReady } from "@/lib/db/client";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamSquadRanking } from "@/lib/services/statistics-service";
+import { parseSportId, chartSchema } from "@/lib/config/validation";
 
 export default async function LeaderboardRoute({
   params,
@@ -17,8 +18,10 @@ export default async function LeaderboardRoute({
   searchParams: Promise<{ chart?: string }>;
 }) {
   const { sport } = await params;
+  if (!parseSportId(sport)) notFound();
   const { chart: chartParam } = await searchParams;
-  const chart = chartParam === "assists" || chartParam === "ga" ? chartParam : "goals";
+  const parsedChart = chartSchema.safeParse(chartParam);
+  const chart = parsedChart.success ? parsedChart.data : "goals";
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();

@@ -1,5 +1,4 @@
-// Server-only enforcement
-import "@/lib/config/env";
+import "server-only";
 import type { LLMProvider } from "@/types/ai";
 import { MockLlmProvider } from "@/lib/ai/providers/mock-provider";
 import { OpenAILlmProvider } from "@/lib/ai/providers/openai-provider";
