@@ -23,6 +23,9 @@
     "smoke:b6": "tsx --conditions=react-server src/lib/scripts/smoke-tests-bloque6.ts",
     "smoke:b7": "tsx --conditions=react-server src/lib/scripts/smoke-tests-bloque7.ts",
     "smoke:b8": "tsx --conditions=react-server src/lib/scripts/smoke-tests-bloque8.ts",
+    "smoke:launch1": "tsx --conditions=react-server src/lib/scripts/smoke-tests-launch1.ts",
+    "smoke:env": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-init.ts",
+    "smoke:env-flags": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-flags.ts",
     "e2e": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {

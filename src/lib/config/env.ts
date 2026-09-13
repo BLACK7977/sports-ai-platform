@@ -49,7 +49,10 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 let cachedEnv: Env | null = null;
-let cachedParseError: z.ZodError | null = null;
+// NOTA: los fallos de parseo NO se cachean a propósito. Si el primer acceso
+// ocurre antes de que el entorno esté cargado (ej. tsx sin .env.local
+// autocargado), un error cacheado contaminaría el proceso para siempre aunque
+// luego aparezcan credenciales válidas. Solo la configuración válida se cachea.
 
 /** Versión tolerante para hasSupabase()/feature-flags: false en vez de throw. */
 function selfHealingParse(): { ok: true; value: Env } | { ok: false } {
@@ -62,7 +65,6 @@ function selfHealingParse(): { ok: true; value: Env } | { ok: false } {
 
 function parseEnv(): Env {
   if (cachedEnv) return cachedEnv;
-  if (cachedParseError) throw buildEnvError(cachedParseError);
 
   const parsed = envSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
@@ -78,7 +80,6 @@ function parseEnv(): Env {
   });
 
   if (!parsed.success) {
-    cachedParseError = parsed.error;
     throw buildEnvError(parsed.error);
   }
 

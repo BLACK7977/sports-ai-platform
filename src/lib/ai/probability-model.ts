@@ -45,6 +45,43 @@ export interface HistoricalMatch {
   status: Match["status"];
 }
 
+/**
+ * Snapshot de inputs para reproducibilidad a nivel de modelo.
+ *
+ * Con este snapshot + effectiveParameters se puede recomputar EXACTAMENTE
+ * λ → P(1X2) sin acceder a la DB. Límite documentado: NO incluye la lista
+ * completa de partidos de la liga usada para los promedios (solo sus valores
+ * agregados + conteo), por lo que la re-derivación de strengths desde filas
+ * crudas requeriría re-leer la liga. Nivel: "reproducibility-model-level".
+ */
+export interface HistoricalMatchRef {
+  id: string;
+  date: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore: number;
+  awayScore: number;
+}
+
+export interface TeamInputsSnapshot {
+  matches: HistoricalMatchRef[];
+  attack: number;
+  defense: number;
+}
+
+export interface ModelInputsSnapshot {
+  /** Cutoff temporal: solo partidos con date < cutoff fueron usados. */
+  cutoff: string;
+  home: TeamInputsSnapshot;
+  away: TeamInputsSnapshot;
+  leagueAverages: {
+    avgHomeGoals: number;
+    avgAwayGoals: number;
+    avgGoalsScored: number;
+    leagueMatchesUsed: number;
+  };
+}
+
 export interface ModelResult {
   modelVersionId: string;
   probabilities: {
@@ -64,6 +101,7 @@ export interface ModelResult {
     leagueMatchesUsed: number;
   };
   parameters: ModelParameters;
+  inputs: ModelInputsSnapshot;
 }
 
 export interface LeagueAverages {
@@ -326,6 +364,15 @@ export function computeModelV1(
   pDraw = Math.max(0, Math.min(1, pDraw));
   pAway = Math.max(0, Math.min(1, pAway));
 
+  const toRef = (m: HistoricalMatch): HistoricalMatchRef => ({
+    id: m.id,
+    date: m.matchDate,
+    homeTeamId: m.homeTeamId,
+    awayTeamId: m.awayTeamId,
+    homeScore: m.homeScore,
+    awayScore: m.awayScore,
+  });
+
   return {
     modelVersionId: "v1-dixon-coles-2026-01",
     probabilities: { home: pHome, draw: pDraw, away: pAway },
@@ -338,6 +385,25 @@ export function computeModelV1(
       leagueMatchesUsed: leagueAvgs.totalMatches,
     },
     parameters: params,
+    inputs: {
+      cutoff: kickoffAt,
+      home: {
+        matches: homeTeamMatches.combined.map(toRef),
+        attack: homeStrengths.attack,
+        defense: homeStrengths.defense,
+      },
+      away: {
+        matches: awayTeamMatches.combined.map(toRef),
+        attack: awayStrengths.attack,
+        defense: awayStrengths.defense,
+      },
+      leagueAverages: {
+        avgHomeGoals: leagueAvgs.avgHomeGoals,
+        avgAwayGoals: leagueAvgs.avgAwayGoals,
+        avgGoalsScored: leagueAvgs.avgGoalsScored,
+        leagueMatchesUsed: leagueAvgs.totalMatches,
+      },
+    },
   };
 }
 
