@@ -6,21 +6,21 @@ type Size = "sm" | "md" | "lg";
 
 const toneMap: Record<Tone, string> = {
   primary:
-    "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:ring-indigo-500/40 shadow-sm disabled:bg-indigo-600/60",
+    "bg-cyan-400 text-slate-950 hover:bg-cyan-300 focus-visible:ring-cyan-400/40 shadow-[0_0_18px_rgba(78,234,255,0.2)] disabled:bg-cyan-400/60",
   secondary:
-    "bg-slate-900 text-white hover:bg-slate-800 focus-visible:ring-slate-500/40 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200",
+    "bg-sky-500/15 text-sky-100 hover:bg-sky-400/20 border border-sky-300/25 focus-visible:ring-sky-400/40",
   ghost:
-    "bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 focus-visible:ring-slate-400/40",
+    "bg-transparent text-slate-300 hover:bg-cyan-400/8 hover:text-cyan-100 focus-visible:ring-cyan-400/40",
   danger:
     "bg-rose-600 text-white hover:bg-rose-500 focus-visible:ring-rose-500/40 disabled:bg-rose-600/60",
   outline:
-    "bg-transparent border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800",
+    "bg-transparent border border-cyan-200/25 text-slate-200 hover:border-cyan-300/55 hover:bg-cyan-400/8 hover:text-cyan-100 focus-visible:ring-cyan-400/40",
 };
 
 const sizeMap: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5 rounded-lg",
-  md: "h-10 px-4 text-sm gap-2 rounded-xl",
-  lg: "h-12 px-6 text-base gap-2 rounded-xl",
+  sm: "h-8 px-3 text-xs gap-1.5 rounded-sm",
+  md: "h-10 px-4 text-sm gap-2 rounded-sm",
+  lg: "h-12 px-6 text-base gap-2 rounded-sm",
 };
 
 type BaseProps = {
@@ -45,7 +45,7 @@ export function Button({
     <button
       {...rest}
       className={[
-        "inline-flex items-center justify-center font-medium transition focus:outline-none focus-visible:ring-4 disabled:opacity-70 disabled:cursor-not-allowed",
+        "sa-action inline-flex items-center justify-center font-medium transition focus:outline-none focus-visible:ring-4 disabled:opacity-70 disabled:cursor-not-allowed",
         toneMap[tone],
         sizeMap[size],
         className,
@@ -76,7 +76,7 @@ export function LinkButton({
       href={href}
       {...rest}
       className={[
-        "inline-flex items-center justify-center font-medium transition focus:outline-none focus-visible:ring-4",
+        "sa-action inline-flex items-center justify-center font-medium transition focus:outline-none focus-visible:ring-4",
         toneMap[tone],
         sizeMap[size],
         className,

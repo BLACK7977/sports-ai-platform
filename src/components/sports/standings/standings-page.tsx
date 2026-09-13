@@ -39,7 +39,7 @@ export default async function StandingsPage({
   const maxPts = Math.max(1, ...standings.map((s) => s.points));
 
   return (
-    <Container size="wide">
+    <Container size="wide" className="product-page standings-page">
       <Stack gap="xl">
         <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div className="space-y-2">
@@ -51,7 +51,7 @@ export default async function StandingsPage({
               <Badge tone="info">{leagueName}</Badge>
               <Badge tone="neutral">{seasonName}</Badge>
             </Row>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
+            <h1 className="page-title">
               Tabla de posiciones
             </h1>
             <p className="text-slate-500 max-w-2xl">
@@ -77,7 +77,7 @@ export default async function StandingsPage({
         </header>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
+          <Card className="product-stat">
             <CardBody>
               <div className="text-xs text-slate-500">Equipos</div>
               <div className="text-3xl font-bold">{standings.length}</div>
@@ -87,7 +87,7 @@ export default async function StandingsPage({
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="product-stat product-stat-assists">
             <CardBody>
               <div className="text-xs text-slate-500">Líder</div>
               <div className="text-2xl font-bold truncate">
@@ -98,7 +98,7 @@ export default async function StandingsPage({
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="product-stat product-stat-discipline">
             <CardBody>
               <div className="text-xs text-slate-500">Goles a favor</div>
               <div className="text-3xl font-bold">
@@ -107,7 +107,7 @@ export default async function StandingsPage({
               <div className="text-xs text-slate-500 mt-2">Temporada</div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="product-stat">
             <CardBody>
               <div className="text-xs text-slate-500">Dif. gol total</div>
               <div
@@ -127,7 +127,7 @@ export default async function StandingsPage({
           </Card>
         </div>
 
-        <Card>
+        <Card className="product-panel">
           <CardHeader>
             <CardTitle>Comparativo de puntos</CardTitle>
             <CardSubtitle>Barras por equipo · colores por puesto</CardSubtitle>
@@ -148,7 +148,7 @@ export default async function StandingsPage({
           </CardBody>
         </Card>
 
-        <Card>
+        <Card className="product-panel">
           <CardHeader>
             <CardTitle>Tabla completa</CardTitle>
             <CardSubtitle>
@@ -161,7 +161,6 @@ export default async function StandingsPage({
             ) : (
               <DataTable>
                 <TableHead>
-                  <tr>
                     <Th className="w-10">#</Th>
                     <Th>Equipo</Th>
                     <Th className="text-right">PJ</Th>
@@ -173,7 +172,6 @@ export default async function StandingsPage({
                     <Th className="text-right">Diff</Th>
                     <Th className="text-right">Pts</Th>
                     <Th className="min-w-[120px]">Forma</Th>
-                  </tr>
                 </TableHead>
                 <TableBody>
                   {standings.map((s, i) => (

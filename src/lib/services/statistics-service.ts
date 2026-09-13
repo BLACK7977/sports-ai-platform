@@ -5,11 +5,12 @@ import type { SportId } from "@/types/core/sport";
 import { getMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";
 import { getTeamsByLeagueId } from "@/lib/db/repositories/teams-repo";
 import {
-  getAllPlayers,
+  getPlayersByIds,
   getPlayersByTeamId,
 } from "@/lib/db/repositories/players-repo";
 import {
   getStatsByMatchId,
+  getStatsByMatchIds,
   getStatsByPlayerId,
   getStatsByTeamIdMatchId,
 } from "@/lib/db/repositories/player-stats-repo";
@@ -75,20 +76,21 @@ export async function getPlayerSeasonRanking(
     );
   }
 
-  const matches = await getMatchesByLeagueSeason(leagueId, seasonId);
-  const teams = await getTeamsByLeagueId(leagueId);
-  const [allPlayers, matchStatsList] = await Promise.all([
-    getAllPlayers(),
-    Promise.all(matches.map((m) => getStatsByMatchId(m.id))),
+  const [matches, teams] = await Promise.all([
+    getMatchesByLeagueSeason(leagueId, seasonId),
+    getTeamsByLeagueId(leagueId),
+  ]);
+  const matchStats = await getStatsByMatchIds(matches.map((match) => match.id));
+  const players = await getPlayersByIds([
+    ...new Set(matchStats.map((stat) => stat.player_id)),
   ]);
 
   const playerMap = new Map<string, { full_name: string; position: string }>();
-  for (const p of allPlayers) {
+  for (const p of players) {
     playerMap.set(p.id, { full_name: p.full_name, position: p.position });
   }
   const teamSet = new Set(teams.map((t) => t.id));
-  const enriched = matchStatsList
-    .flat()
+  const enriched = matchStats
     .filter((ps) => teamSet.has(ps.team_id))
     .map((ps) => {
       const p = playerMap.get(ps.player_id) ?? {

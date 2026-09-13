@@ -40,6 +40,16 @@ function jerseyColor(teamId: string) {
   return colors[h % colors.length];
 }
 
+function playerAge(dateOfBirth?: string): number | null {
+  if (!dateOfBirth) return null;
+  const birth = new Date(dateOfBirth);
+  if (!Number.isFinite(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) age--;
+  return age;
+}
+
 export default async function PlayerDetailPage({
   sport,
   leagueId,
@@ -71,20 +81,16 @@ export default async function PlayerDetailPage({
   const sportEmoji = has?.sport.emoji ?? "⚽";
   const sportName = has?.sport.displayName ?? "Deporte";
   const [jBg, jTxt] = jerseyColor(player.team_id);
+  const age = playerAge(player.date_of_birth);
 
   const goals = seasonAgg?.goals ?? careerStats.goals;
   const assists = seasonAgg?.assists ?? careerStats.assists;
   const played = seasonAgg?.matchesPlayed ?? careerStats.matchesPlayed;
   const minutes = seasonAgg?.totalMinutes ?? careerStats.totalMinutes;
-  const passAcc = seasonAgg?.avgPassAccuracyPct ?? 75;
+  const passAcc = seasonAgg?.avgPassAccuracyPct ?? null;
   const yellows = seasonAgg?.yellowCards ?? careerStats.yellowCards;
   const reds = seasonAgg?.redCards ?? careerStats.redCards;
-  const rating =
-    careerStats.ratingAvg > 0
-      ? careerStats.ratingAvg
-      : seasonAgg
-        ? 6.5 + ((seasonAgg.goals + seasonAgg.assists) * 0.1)
-        : 6.5;
+  const rating = careerStats.ratingAvg > 0 ? careerStats.ratingAvg : null;
 
   const maxG = Math.max(1, ...allSeasonRank.map((r) => r.goals), goals);
   const maxA = Math.max(1, ...allSeasonRank.map((r) => r.assists), assists);
@@ -94,21 +100,20 @@ export default async function PlayerDetailPage({
     minutes,
   );
   const maxPass = 100;
-  const tacklesEst = played > 0 ? Math.round(played * 1.8) : 5;
+  const tacklesEst = null;
   const maxTackles = Math.max(
     1,
     ...allSeasonRank.map((r) => Math.round(r.matchesPlayed * 1.8)),
-    tacklesEst,
   );
   const maxRating = 10;
 
   const radarValues = [
     Math.round((goals / maxG) * 100),
     Math.round((assists / maxA) * 100),
-    Math.round((passAcc / maxPass) * 100),
+    Math.round(((passAcc ?? 0) / maxPass) * 100),
     Math.round((minutes / maxMin) * 100),
-    Math.round((tacklesEst / maxTackles) * 100),
-    Math.min(100, Math.round((rating / maxRating) * 100)),
+    Math.round(((tacklesEst ?? 0) / maxTackles) * 100),
+    Math.min(100, Math.round(((rating ?? 0) / maxRating) * 100)),
   ];
   const radarLabels = [
     "Goles",
@@ -123,7 +128,7 @@ export default async function PlayerDetailPage({
   void seasonId;
 
   return (
-    <Container size="wide">
+    <Container size="wide" className="product-page player-detail-page">
       <Stack gap="xl">
         <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <Row className="flex-wrap gap-2">
@@ -145,7 +150,7 @@ export default async function PlayerDetailPage({
           </Row>
         </header>
 
-        <Card className="overflow-hidden">
+        <Card className="product-panel overflow-hidden">
           <div
             className={`h-40 ${jBg} bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 relative`}
           >
@@ -174,12 +179,13 @@ export default async function PlayerDetailPage({
                   {player.nationality ? (
                     <Badge tone="warning">{player.nationality}</Badge>
                   ) : null}
+                  {age !== null ? <Badge tone="neutral">{age} años</Badge> : null}
                 </Row>
                 <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white break-words">
                   {player.full_name}
                 </h1>
                 <p className="text-slate-500 max-w-3xl">
-                  Dorsal #{player.jersey_number ?? "—"} · Últimos partidos con
+                  Dorsal #{player.jersey_number ?? "—"}{player.date_of_birth ? ` · Nació el ${new Date(player.date_of_birth).toLocaleDateString("es-AR")}` : ""} · Últimos partidos con
                   análisis de rendimiento e IA.
                 </p>
               </div>
@@ -212,7 +218,7 @@ export default async function PlayerDetailPage({
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
+          <Card className="product-panel lg:col-span-2">
             <CardHeader>
               <CardTitle>Perfil de rendimiento</CardTitle>
               <CardSubtitle>
@@ -245,12 +251,11 @@ export default async function PlayerDetailPage({
                     />
                   </div>
                   <div>
-                    <MiniGauge
-                      value={passAcc}
-                      max={100}
-                      label="Precisión de pases %"
-                      tone="primary"
-                    />
+                    {passAcc === null ? (
+                      <p className="text-sm text-slate-400">Precisión de pases: No disponible</p>
+                    ) : (
+                      <MiniGauge value={passAcc} max={100} label="Precisión de pases %" tone="primary" />
+                    )}
                   </div>
                   <div>
                     <MiniGauge
@@ -261,12 +266,16 @@ export default async function PlayerDetailPage({
                     />
                   </div>
                   <div>
-                    <MiniGauge
-                      value={Math.min(10, rating)}
-                      max={10}
-                      label={`Rating promedio ${rating.toFixed(1)} / 10`}
-                      tone={rating >= 7.5 ? "success" : rating >= 6.5 ? "warning" : "danger"}
-                    />
+                    {rating === null ? (
+                      <p className="text-sm text-slate-400">Rating promedio: No disponible</p>
+                    ) : (
+                      <MiniGauge
+                        value={Math.min(10, rating)}
+                        max={10}
+                        label={`Rating promedio ${rating.toFixed(1)} / 10`}
+                        tone={rating >= 7.5 ? "success" : rating >= 6.5 ? "warning" : "danger"}
+                      />
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-2">
                     <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-lg p-3 text-center">
@@ -291,7 +300,7 @@ export default async function PlayerDetailPage({
             </CardBody>
           </Card>
 
-          <Card>
+          <Card className="product-panel">
             <CardHeader>
               <CardTitle>Reporte con IA</CardTitle>
               <CardSubtitle>
@@ -312,7 +321,7 @@ export default async function PlayerDetailPage({
                     </ul>
                   ) : (
                     <p className="text-sm text-emerald-700/70">
-                      Registro sólido en temporada.
+                      No disponible.
                     </p>
                   )}
                 </div>
@@ -328,7 +337,7 @@ export default async function PlayerDetailPage({
                     </ul>
                   ) : (
                     <p className="text-sm text-rose-700/70">
-                      Mantener foco en regularidad.
+                      No disponible.
                     </p>
                   )}
                 </div>
@@ -340,8 +349,7 @@ export default async function PlayerDetailPage({
                   Resumen de rendimiento
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {report.performanceSummary ||
-                    `Temporada con ${played} PJ, ${goals} goles y ${assists} asistencias.`}
+                  {report.performanceSummary || "No disponible."}
                 </p>
               </div>
               <Divider />
@@ -350,14 +358,14 @@ export default async function PlayerDetailPage({
                   Perspectiva
                 </div>
                 <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {report.outlook || "Seguir trabajando en consistencia."}
+                  {report.outlook || "No disponible."}
                 </p>
               </div>
             </CardFooter>
           </Card>
         </div>
 
-        <Card>
+        <Card className="product-panel">
           <CardHeader>
             <CardTitle>Últimos partidos</CardTitle>
             <CardSubtitle>
@@ -373,7 +381,6 @@ export default async function PlayerDetailPage({
             ) : (
               <DataTable>
                 <TableHead>
-                  <tr>
                     <Th>Fecha</Th>
                     <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-slate-900 dark:text-slate-400">
                       Rival
@@ -382,7 +389,6 @@ export default async function PlayerDetailPage({
                     <Th className="text-right">G</Th>
                     <Th className="text-right">A</Th>
                     <Th className="w-24"></Th>
-                  </tr>
                 </TableHead>
                 <TableBody>
                   {careerStats.matches.slice(0, 10).map((m, i) => (

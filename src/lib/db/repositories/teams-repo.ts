@@ -34,6 +34,7 @@ export async function getTeamsByIds(ids: string[]): Promise<Team[]> {
 export async function upsertTeam(row: TeamInsert): Promise<Team | null> {
   const db = await ensureDbReady();
   const r = await db.upsert("teams", row, "id");
+  if (r.error) throw r.error;
   return (r.data as Team | null) ?? null;
 }
 

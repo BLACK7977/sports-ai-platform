@@ -14,6 +14,8 @@ const SPORT_ID = "soccer";
 export interface SoccerDbRows {
   match: MatchInsert;
   playerStats: PlayerMatchStatsInsert[];
+  teams?: import("@/types/db/tables").TeamInsert[];
+  players?: import("@/types/db/tables").PlayerInsert[];
 }
 
 export const soccerMatchMapper: EntityMapper<
@@ -36,6 +38,8 @@ export const soccerMatchMapper: EntityMapper<
       home_score: dto.home_score,
       away_score: dto.away_score,
       external_id: dto.external_id,
+      provider: dto.provider,
+      last_synced_at: dto.last_synced_at,
       sport_specific: {
         duration_minutes: soccerConfig.matchDurationMinutes,
         ...(dto.specific ?? {}),
@@ -55,7 +59,7 @@ export const soccerMatchMapper: EntityMapper<
         updated_at: now,
       }),
     );
-    return { match, playerStats };
+    return { match, playerStats, teams: dto.teams, players: dto.players };
   },
   fromDb: (db) => {
     const m = db.match;

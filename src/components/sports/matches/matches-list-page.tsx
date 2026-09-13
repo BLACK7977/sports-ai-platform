@@ -1,184 +1,65 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  CardSubtitle,
-} from "@/components/ui/card";
+import { Card, CardBody, CardHeader, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Badge, formatBadgeForStatus } from "@/components/ui/badge";
 import { Container, Stack, Row } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
-import {
-  DataTable,
-  TableHead,
-  Th,
-  TableBody,
-  Tr,
-  Td,
-  EmptyRow,
-} from "@/components/ui/table";
+import { DataTable, TableHead, Th, TableBody, Tr, Td, EmptyRow } from "@/components/ui/table";
 import { getHasSport } from "@/components/sports/sport-helpers";
-import { getLeaguesBySportId } from "@/lib/db/repositories/leagues-repo";
-import {
-  getAllMatches,
-  getMatchesByLeagueSeason,
-} from "@/lib/db/repositories/matches-repo";
+import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
+import { getMatchesByLeagueSeason, getMatchesByLeagueSeasonDateRange, getMatchesByLeagueSeasonStatuses } from "@/lib/db/repositories/matches-repo";
 import { getTeamsByIds } from "@/lib/db/repositories/teams-repo";
-import { getSeasonsByLeagueId } from "@/lib/db/repositories/seasons-repo";
 import { ensureDbReady } from "@/lib/db/client";
+import type { Match, Team } from "@/types/db/tables";
 
-export default async function MatchesListPage({
-  sport,
-}: {
-  sport: string;
-}) {
+const views = ["week", "today", "upcoming", "finished", "all"] as const;
+type MatchView = (typeof views)[number];
+const labels: Record<MatchView, string> = { week: "Esta semana", today: "Hoy", upcoming: "Próximos", finished: "Finalizados", all: "Todos" };
+
+function validView(value?: string): MatchView { return views.includes(value as MatchView) ? value as MatchView : "week"; }
+function validWeekOffset(value?: string): number { const parsed = Number(value); return Number.isInteger(parsed) && Math.abs(parsed) <= 52 ? parsed : 0; }
+function dateRange(date: Date) { const start = new Date(date); start.setHours(0, 0, 0, 0); const end = new Date(date); end.setHours(23, 59, 59, 999); return { start, end }; }
+function weekDates(offset: number) { const now = new Date(); const start = new Date(now); const day = start.getDay(); start.setDate(start.getDate() - (day === 0 ? 6 : day - 1) + offset * 7); start.setHours(0, 0, 0, 0); const end = new Date(start); end.setDate(end.getDate() + 6); end.setHours(23, 59, 59, 999); return { start, end }; }
+function weekLabel(start: Date, end: Date) { const formatter = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short" }); return `${formatter.format(start)} — ${formatter.format(end)}`; }
+function href(view: MatchView, week: number) { const query = new URLSearchParams(); if (view !== "week") query.set("view", view); if (view === "week" && week !== 0) query.set("week", String(week)); const suffix = query.toString(); return suffix ? `?${suffix}` : ""; }
+
+export default async function MatchesListPage({ sport, view: rawView, week: rawWeek }: { sport: string; view?: string; week?: string }) {
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();
+  const view = validView(rawView);
+  const week = validWeekOffset(rawWeek);
+  const { active } = await getCompetitionSelectionState(sport);
+  const league = active?.league;
+  const seasonId = active?.season.id ?? "";
+  const seasonName = active?.season.name ?? "Temporada";
+  const weekRange = weekDates(week);
+  const today = dateRange(new Date());
+  const matches = !league ? [] : view === "week"
+    ? await getMatchesByLeagueSeasonDateRange(league.id, seasonId, weekRange.start.toISOString(), weekRange.end.toISOString())
+    : view === "today"
+      ? await getMatchesByLeagueSeasonDateRange(league.id, seasonId, today.start.toISOString(), today.end.toISOString())
+      : view === "upcoming"
+        ? await getMatchesByLeagueSeasonStatuses(league.id, seasonId, ["scheduled", "in_progress"])
+        : view === "finished"
+          ? await getMatchesByLeagueSeasonStatuses(league.id, seasonId, ["finished"])
+          : await getMatchesByLeagueSeason(league.id, seasonId);
+  const mainMatches = [...matches].sort((a, b) => a.match_date.localeCompare(b.match_date));
+  const teams = await getTeamsByIds([...new Set(mainMatches.flatMap((match) => [match.home_team_id, match.away_team_id]))]);
+  const teamMap = new Map(teams.map((team) => [team.id, team]));
+  const context = view === "week" ? `Semana: ${weekLabel(weekRange.start, weekRange.end)}` : labels[view];
 
-  const [leagues, allMatches] = await Promise.all([
-    getLeaguesBySportId(sport),
-    getAllMatches(),
-  ]);
-  const sportMatches = allMatches.filter(
-    (m) => leagues.some((l) => l.id === m.league_id),
-  );
-  const mainLeague = leagues.find((l) => l.id === "demo-liga-1") ?? leagues[0];
-  const mainSeasonId =
-    mainLeague?.id === "demo-liga-1"
-      ? "season-2026-1"
-      : (
-          await getSeasonsByLeagueId(mainLeague?.id ?? leagues[0]?.id ?? "")
-        )[0]?.id ??
-        "";
-  const mainMatches = mainLeague
-    ? await getMatchesByLeagueSeason(mainLeague.id, mainSeasonId)
-    : [];
-  const teamIds = new Set(
-    mainMatches.flatMap((m) => [m.home_team_id, m.away_team_id]),
-  );
-  const teams = await getTeamsByIds([...teamIds]);
-  const teamMap = new Map(teams.map((t) => [t.id, t]));
-
-  return (
-    <Container size="wide">
-      <Stack gap="xl">
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-          <div>
-            <Row className="mb-2">
-              <Badge tone="primary">{has.sport.emoji} {has.sport.displayName}</Badge>
-              <Badge tone="neutral">{sportMatches.length} partidos totales</Badge>
-            </Row>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-              Fixtures · Partidos
-            </h1>
-            <p className="text-slate-500 mt-1 max-w-2xl">
-              Resultados, próximos encuentros y acceso al detalle con análisis
-              de IA y pronóstico.
-            </p>
-          </div>
-          <Row>
-            <LinkButton href={`/${sport}/standings`} tone="outline">
-              Tabla
-            </LinkButton>
-            <LinkButton href={`/${sport}/leaderboard`} tone="ghost">
-              Ranking jugadores
-            </LinkButton>
-          </Row>
-        </header>
-
-        <Card>
-          <CardHeader
-            action={
-              <LinkButton href={`/${sport}`} size="sm" tone="ghost">
-                ← Volver
-              </LinkButton>
-            }
-          >
-            <CardTitle>{mainLeague?.name ?? "Liga"}</CardTitle>
-            <CardSubtitle>{mainSeasonId} · {mainMatches.length} partidos</CardSubtitle>
-          </CardHeader>
-          <CardBody className="!p-0">
-            <DataTable>
-              <TableHead>
-                <Th>Fecha</Th>
-                <Th>Local</Th>
-                <Th align="center">Marcador</Th>
-                <Th>Visita</Th>
-                <Th align="right">Estado</Th>
-              </TableHead>
-              <TableBody>
-                {mainMatches.length === 0 ? (
-                  <EmptyRow message="Sin partidos para esta liga/temporada." cols={5} />
-                ) : (
-                  [...mainMatches]
-                    .sort((a, b) => (a.match_date < b.match_date ? 1 : -1))
-                    .map((m) => {
-                      const b = formatBadgeForStatus(m.status);
-                      const d = new Date(m.match_date);
-                      const showScore =
-                        m.status === "finished" || m.status === "in_progress";
-                      return (
-                        <Tr
-                          key={m.id}
-                          hoverable
-                        >
-                          <Td>
-                            <div className="font-medium">
-                              {d.toLocaleDateString()}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                              {d.toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </div>
-                          </Td>
-                          <Td>
-                            <Link
-                              href={`/${sport}/matches/${m.id}`}
-                              className="hover:underline"
-                            >
-                              {teamMap.get(m.home_team_id)?.name ??
-                                m.home_team_id}
-                            </Link>
-                          </Td>
-                          <Td align="center">
-                            <div className="inline-flex items-center gap-3 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 font-bold tabular-nums">
-                              <span className={showScore ? "" : "opacity-0"}>
-                                {m.home_score ?? 0}
-                              </span>
-                              <span className="text-slate-400">
-                                {showScore ? ":" : "vs"}
-                              </span>
-                              <span className={showScore ? "" : "opacity-0"}>
-                                {m.away_score ?? 0}
-                              </span>
-                            </div>
-                          </Td>
-                          <Td>
-                            <Link
-                              href={`/${sport}/matches/${m.id}`}
-                              className="hover:underline"
-                            >
-                              {teamMap.get(m.away_team_id)?.name ??
-                                m.away_team_id}
-                            </Link>
-                          </Td>
-                          <Td align="right">
-                            <Badge tone={b.tone}>{b.label}</Badge>
-                          </Td>
-                        </Tr>
-                      );
-                    })
-                )}
-              </TableBody>
-            </DataTable>
-          </CardBody>
-        </Card>
-      </Stack>
-    </Container>
-  );
+  return <Container size="wide" className="product-page match-list-page"><Stack gap="xl">
+    <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"><div><div className="page-eyebrow">{has.sport.emoji} {has.sport.displayName} · Centro de partidos</div><h1 className="page-title">Fixtures · Partidos</h1><p className="mt-1 max-w-2xl text-slate-400">Calendario y resultados de {league?.name ?? "la competición activa"} · {seasonName}.</p></div><Row><LinkButton href={`/${sport}/standings`} tone="outline">Tabla</LinkButton><LinkButton href={`/${sport}/leaderboard`} tone="ghost">Ranking jugadores</LinkButton></Row></header>
+    <Card className="product-panel match-list-panel"><CardHeader action={<LinkButton href={`/${sport}`} size="sm" tone="ghost">← Volver</LinkButton>}><CardTitle>Competición · {league?.name ?? "Liga"}</CardTitle><CardSubtitle>{seasonName} · {context} · {mainMatches.length} partidos</CardSubtitle></CardHeader><CardBody className="space-y-4 !p-0">
+      <nav className="flex flex-wrap gap-2 border-y border-slate-800/80 px-4 py-3" aria-label="Filtros de partidos">{views.map((entry) => <Link key={entry} href={href(entry, week)} aria-current={view === entry ? "page" : undefined} className={`rounded-md px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300 ${view === entry ? "bg-cyan-400/15 text-cyan-200" : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"}`}>{labels[entry]}</Link>)}</nav>
+      {view === "week" && <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-1 text-sm"><span className="font-medium text-slate-300">Semana del {weekLabel(weekRange.start, weekRange.end)}</span><div className="flex gap-2"><Link href={href("week", week - 1)} className="match-week-link">← Semana anterior</Link><Link href={href("week", week + 1)} className="match-week-link">Semana siguiente →</Link></div></div>}
+      <div className="mobile-match-list md:hidden">{mainMatches.length === 0 ? <p className="p-5 text-sm text-slate-400">No hay partidos {view === "week" ? "en esta semana" : "para este filtro"} en la competición activa.</p> : mainMatches.map((match) => <MobileMatch key={match.id} match={match} sport={sport} teams={teamMap} />)}</div>
+      <div className="hidden md:block"><DataTable><TableHead><Th>Fecha</Th><Th>Local</Th><Th align="center">Marcador</Th><Th>Visita</Th><Th align="right">Estado</Th></TableHead><TableBody>{mainMatches.length === 0 ? <EmptyRow message="No hay partidos para este filtro en la competición activa." cols={5} /> : mainMatches.map((match) => <DesktopMatch key={match.id} match={match} sport={sport} teams={teamMap} />)}</TableBody></DataTable></div>
+    </CardBody></Card>
+  </Stack></Container>;
 }
+
+type MatchProps = { match: Match; sport: string; teams: Map<string, Team> };
+function MobileMatch({ match, sport, teams }: MatchProps) { const badge = formatBadgeForStatus(match.status); const date = new Date(match.match_date); const scored = match.status === "finished" || match.status === "in_progress"; return <Link href={`/${sport}/matches/${match.id}`} className="mobile-match-row"><div className="mobile-match-meta"><time>{date.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })} · {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><Badge tone={badge.tone}>{badge.label}</Badge></div><div className="mobile-match-scoreline"><strong>{teams.get(match.home_team_id)?.name ?? match.home_team_id}</strong><b>{scored ? `${match.home_score ?? 0} : ${match.away_score ?? 0}` : "VS"}</b><strong>{teams.get(match.away_team_id)?.name ?? match.away_team_id}</strong></div></Link>; }
+function DesktopMatch({ match, sport, teams }: MatchProps) { const badge = formatBadgeForStatus(match.status); const date = new Date(match.match_date); const scored = match.status === "finished" || match.status === "in_progress"; return <Tr hoverable><Td><div className="font-medium">{date.toLocaleDateString()}</div><div className="text-xs text-slate-400">{date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></Td><Td><Link href={`/${sport}/matches/${match.id}`} className="hover:underline">{teams.get(match.home_team_id)?.name ?? match.home_team_id}</Link></Td><Td align="center"><div className="inline-flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-1 font-bold tabular-nums dark:bg-slate-800"><span className={scored ? "" : "opacity-0"}>{match.home_score ?? 0}</span><span className="text-slate-400">{scored ? ":" : "vs"}</span><span className={scored ? "" : "opacity-0"}>{match.away_score ?? 0}</span></div></Td><Td><Link href={`/${sport}/matches/${match.id}`} className="hover:underline">{teams.get(match.away_team_id)?.name ?? match.away_team_id}</Link></Td><Td align="right"><Badge tone={badge.tone}>{badge.label}</Badge></Td></Tr>; }

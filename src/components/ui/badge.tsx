@@ -10,9 +10,9 @@ export type BadgeTone =
 
 const toneMap: Record<BadgeTone, string> = {
   neutral:
-    "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+    "bg-slate-400/10 text-slate-300 ring-slate-300/20",
   primary:
-    "bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-200 dark:ring-indigo-400/30",
+    "bg-cyan-400/10 text-cyan-200 ring-cyan-300/30",
   success:
     "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/30",
   warning:
@@ -35,7 +35,7 @@ export function Badge({
     <span
       {...rest}
       className={[
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
+        "sa-badge inline-flex items-center rounded-sm px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
         toneMap[tone],
         className,
       ].join(" ")}

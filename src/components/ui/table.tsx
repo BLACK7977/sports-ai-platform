@@ -7,15 +7,23 @@ export function DataTable({
   return (
     <div
       className={[
-        "overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800",
+        "sa-data-table overflow-hidden rounded-sm border border-cyan-100/12",
         className,
       ].join(" ")}
     >
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+      <div
+        className="sa-table-scroll overflow-x-auto"
+        role="region"
+        aria-label="Tabla desplazable horizontalmente"
+        tabIndex={0}
+      >
+        <table className="min-w-full divide-y divide-cyan-100/10 text-sm">
           {children}
         </table>
       </div>
+      <p className="sa-table-scroll-hint" aria-hidden>
+        Deslizá horizontalmente para ver todas las columnas
+      </p>
     </div>
   );
 }
@@ -27,7 +35,7 @@ export function TableHead({
   return (
     <thead
       className={[
-        "bg-slate-50 text-slate-500 dark:bg-slate-900/60 dark:text-slate-400",
+        "sa-table-head bg-cyan-400/5 text-slate-400",
         className,
       ].join(" ")}
     >
@@ -71,7 +79,7 @@ export function TableBody({
   return (
     <tbody
       className={[
-        "divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200",
+        "divide-y divide-cyan-100/8 bg-[#071321] text-slate-200",
         className,
       ].join(" ")}
     >
@@ -93,7 +101,7 @@ export function Tr({
     <tr
       className={[
         onClick || hoverable
-          ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 transition"
+          ? "cursor-pointer hover:bg-cyan-300/5 transition"
           : "",
         className,
       ].join(" ")}

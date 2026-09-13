@@ -1,464 +1,91 @@
 import Link from "next/link";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  CardSubtitle,
-} from "@/components/ui/card";
+import type { CSSProperties } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Container, Stack, Row, Divider } from "@/components/ui/container";
+import { Container, Stack, Row } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
-import {
-  DataTable,
-  TableHead,
-  Th,
-  TableBody,
-  Tr,
-  Td,
-} from "@/components/ui/table";
 import { MiniGauge, StandingsBars } from "@/components/charts/svg-charts";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import type { SoccerPlayerSeasonAggregate } from "@/sports/soccer/types";
 
 type RankRow = SoccerPlayerSeasonAggregate & { teamName: string };
+type Metric = "goals" | "assists" | "ga";
 
-function medalColor(i: number) {
-  if (i === 0) return "bg-yellow-400 text-yellow-900";
-  if (i === 1) return "bg-slate-300 text-slate-700";
-  if (i === 2) return "bg-amber-600 text-amber-50";
-  return "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200";
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((item) => item[0]).join("").toUpperCase();
+const impact = (row: RankRow) => row.goals + row.assists;
+const rankTone = (rank: number) => rank === 0 ? "champion" : rank === 1 ? "runner" : rank === 2 ? "third" : "field";
+
+function PlayerMark({ row, rank = 10 }: { row: RankRow; rank?: number }) {
+  return <span className={`player-stamp player-stamp-${rankTone(rank)}`} aria-hidden>{initials(row.fullName)}</span>;
 }
 
-export default async function LeaderboardPage({
-  sport,
-  leagueName,
-  seasonName,
-  squadRanking,
-  topN = 15,
-  chart = "goals",
-}: {
-  sport: string;
-  leagueName: string;
-  seasonName: string;
-  squadRanking: RankRow[];
-  topN?: number;
-  chart?: "goals" | "assists" | "ga";
+export default async function LeaderboardPage({ sport, leagueName, seasonName, squadRanking, topN = 15, chart = "goals" }: {
+  sport: string; leagueName: string; seasonName: string; squadRanking: RankRow[]; topN?: number; chart?: Metric;
 }) {
   const has = getHasSport(sport);
-  const sportEmoji = has?.sport.emoji ?? "⚽";
   const sportName = has?.sport.displayName ?? "Deporte";
-
-  const byGoals = [...squadRanking]
-    .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
-    .slice(0, topN);
-  const byAssists = [...squadRanking]
-    .sort((a, b) => b.assists - a.assists || b.goals - a.goals)
-    .slice(0, topN);
-  const byGa = [...squadRanking]
-    .sort(
-      (a, b) =>
-        b.goals + b.assists - (a.goals + a.assists) ||
-        b.goals - a.goals,
-    )
-    .slice(0, topN);
-  const byCards = [...squadRanking]
-    .sort(
-      (a, b) =>
-        b.yellowCards * 1 + b.redCards * 3 - (a.yellowCards * 1 + a.redCards * 3),
-    )
-    .slice(0, 10);
-  const maxG = Math.max(1, ...byGoals.map((r) => r.goals));
-  const maxA = Math.max(1, ...byAssists.map((r) => r.assists));
-  const maxGa = Math.max(1, ...byGa.map((r) => r.goals + r.assists));
-
-  const chartRows = chart === "assists" ? byAssists : chart === "ga" ? byGa : byGoals;
-  const chartMax = chart === "assists" ? maxA : chart === "ga" ? maxGa : maxG;
-  const chartLabel = chart === "assists" ? "asistencias" : chart === "ga" ? "G+A" : "goles";
-  const chartData = chartRows.slice(0, 8).map((r) => ({
-    name: r.fullName,
-    short: r.fullName.split(" ").slice(-1).join(" ") || r.fullName.slice(0, 8),
-    value: chart === "assists" ? r.assists : chart === "ga" ? r.goals + r.assists : r.goals,
-    max: chartMax,
-  }));
+  const sportEmoji = has?.sport.emoji ?? "⚽";
+  const byGoals = [...squadRanking].sort((a, b) => b.goals - a.goals || b.assists - a.assists).slice(0, topN);
+  const byAssists = [...squadRanking].sort((a, b) => b.assists - a.assists || b.goals - a.goals).slice(0, topN);
+  const byImpact = [...squadRanking].sort((a, b) => impact(b) - impact(a) || b.goals - a.goals).slice(0, topN);
+  const activeRows = chart === "assists" ? byAssists : chart === "ga" ? byImpact : byGoals;
+  const max = Math.max(1, ...activeRows.map((row) => chart === "goals" ? row.goals : chart === "assists" ? row.assists : impact(row)));
+  const label = chart === "goals" ? "Goles" : chart === "assists" ? "Asistencias" : "Impacto G+A";
+  const totalGoals = squadRanking.reduce((sum, row) => sum + row.goals, 0);
+  const totalAssists = squadRanking.reduce((sum, row) => sum + row.assists, 0);
+  const totalMinutes = squadRanking.reduce((sum, row) => sum + row.totalMinutes, 0);
+  const podium = byImpact.slice(0, 3);
+  const hasIndividualStats = squadRanking.length > 0;
 
   return (
-    <Container size="wide">
+    <Container size="wide" className="product-page leaderboard-page signal-page">
       <Stack gap="xl">
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div className="space-y-2">
-            <Row className="flex-wrap gap-2">
-              <Badge tone="primary">
-                <span className="mr-1">{sportEmoji}</span>
-                {sportName}
-              </Badge>
-              <Badge tone="info">{leagueName}</Badge>
-              <Badge tone="neutral">{seasonName}</Badge>
-              <Badge tone="success">{squadRanking.length} jugadores</Badge>
-            </Row>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
-              Tabla de líderes
-            </h1>
-            <p className="text-slate-500 max-w-2xl">
-              Goleadores, asistentes, G+A total y tarjetas. Ranking por equipo
-              con comparativo visual.
-            </p>
+        <header className="ranking-hero sa-reveal">
+          <div className="ranking-hero-grid" aria-hidden />
+          <div className="ranking-hero-copy">
+            <div className="signal-label"><span className="signal-dot" /> Inteligencia de rendimiento</div>
+            <Row className="mt-4 gap-2"><Badge tone="primary">{sportEmoji} {sportName}</Badge><Badge tone="info">{leagueName}</Badge><Badge tone="neutral">{seasonName}</Badge></Row>
+            <h1 className="ranking-title">El pulso de <em>la competencia.</em></h1>
+            <p>Una lectura rápida de quién transforma minutos en impacto. Goles, asistencias y participación en un campo de rendimiento.</p>
           </div>
-          <Row className="flex-wrap gap-2">
-            <LinkButton href={`/${sport}`} tone="ghost" size="md">
-              ← Volver
-            </LinkButton>
-            <LinkButton href={`/${sport}/standings`} tone="outline" size="md">
-              Tabla equipos
-            </LinkButton>
-            <LinkButton href={`/${sport}/matches`} tone="primary" size="md">
-              Fixtures
-            </LinkButton>
-          </Row>
+          <div className="ranking-hero-status"><div><span>Plantel indexado</span><strong>{squadRanking.length}</strong><small>jugadores medidos</small></div><div className="status-orbit" aria-hidden>AI<i /></div><span className="status-caption">SEÑALES DISPONIBLES<br />SIN PROYECCIONES</span></div>
+          <div className="ranking-hero-actions"><LinkButton href={`/${sport}/standings`} tone="outline" size="md">Tabla de equipos</LinkButton><LinkButton href={`/${sport}/matches`} tone="primary" size="md">Centro de partidos →</LinkButton></div>
         </header>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
-            <CardBody>
-              <div className="text-xs text-slate-500">Goles (temporada)</div>
-              <div className="text-3xl font-bold">
-                {squadRanking.reduce((a, r) => a + r.goals, 0)}
-              </div>
-              <div className="text-xs text-emerald-600 mt-2 font-medium">
-                Líder: {byGoals[0]?.fullName ?? "—"} · {byGoals[0]?.goals ?? 0}G
-              </div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <div className="text-xs text-slate-500">Asistencias</div>
-              <div className="text-3xl font-bold">
-                {squadRanking.reduce((a, r) => a + r.assists, 0)}
-              </div>
-              <div className="text-xs text-indigo-600 mt-2 font-medium">
-                Líder: {byAssists[0]?.fullName ?? "—"} · {byAssists[0]?.assists ?? 0}A
-              </div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <div className="text-xs text-slate-500">Partidos jugados</div>
-              <div className="text-3xl font-bold tabular-nums">
-                {squadRanking.reduce((a, r) => a + r.matchesPlayed, 0)}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">Acumulado liga</div>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <div className="text-xs text-slate-500">Tarjetas (TA+3·TR)</div>
-              <div className="text-3xl font-bold tabular-nums text-amber-600">
-                {squadRanking.reduce(
-                  (a, r) => a + r.yellowCards + r.redCards * 3,
-                  0,
-                )}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">
-                Índice disciplinario
-              </div>
-            </CardBody>
-          </Card>
-        </div>
+        {hasIndividualStats ? <section className="signal-strip sa-reveal" aria-label="Resumen de rendimiento">
+          <div><span>GOLES</span><strong>{totalGoals}</strong><small>{byGoals[0]?.fullName ?? "Sin líder"}</small></div>
+          <div><span>ASISTENCIAS</span><strong>{totalAssists}</strong><small>{byAssists[0]?.fullName ?? "Sin líder"}</small></div>
+          <div><span>MINUTOS</span><strong>{totalMinutes.toLocaleString("es-AR")}</strong><small>volumen registrado</small></div>
+          <div><span>IMPACTO</span><strong>{squadRanking.reduce((sum, row) => sum + impact(row), 0)}</strong><small>acciones de gol</small></div>
+        </section> : <section className="leaderboard-empty-state sa-reveal" aria-labelledby="leaderboard-empty-title">
+          <span>ESTADÍSTICAS INDIVIDUALES</span>
+          <h2 id="leaderboard-empty-title">El ranking estará disponible al completar la sincronización.</h2>
+          <p>Esta competición ya tiene sus equipos y partidos disponibles. Los goles, asistencias, minutos y demás métricas de cada jugador aparecerán cuando se sincronicen las estadísticas individuales por partido.</p>
+          <LinkButton href={`/${sport}/matches`} tone="outline" size="md">Ver partidos de la competición</LinkButton>
+        </section>}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Comparativo de rendimiento</CardTitle>
-            <CardSubtitle>Primeros 8 puestos · {chartLabel}</CardSubtitle>
-          </CardHeader>
-          <CardBody>
-            <nav aria-label="Métrica de gráfica" className="mb-4 flex flex-wrap gap-2">
-              {([
-                ["goals", "Goles"],
-                ["assists", "Asistencias"],
-                ["ga", "G+A"],
-              ] as const).map(([value, label]) => (
-                <LinkButton
-                  key={value}
-                  href={`/${sport}/leaderboard?chart=${value}`}
-                  size="sm"
-                  tone={chart === value ? "primary" : "outline"}
-                >
-                  {label}
-                </LinkButton>
-              ))}
-            </nav>
-            {chartRows.length === 0 ? (
-              <p className="text-sm text-slate-400">Sin datos.</p>
-            ) : (
-              <StandingsBars data={chartData} />
-            )}
-          </CardBody>
-        </Card>
+        {hasIndividualStats ? <><section className="podium-section">
+          <div className="section-intro sa-reveal"><span>01 / LÍDERES DE IMPACTO</span><h2>Los tres que inclinan el campo.</h2><p>Ordenados por contribución directa de gol. No es una predicción: es producción registrada.</p></div>
+          {podium.length ? <div className="impact-podium">{[podium[1], podium[0], podium[2]].filter(Boolean).map((row, visualIndex) => {
+            const rank = visualIndex === 0 ? 1 : visualIndex === 1 ? 0 : 2;
+            const height = rank === 0 ? "podium-first" : rank === 1 ? "podium-second" : "podium-third";
+            return <Link key={row.playerId} href={`/${sport}/players/${row.playerId}`} className={`podium-player ${height} sa-reveal`} style={{ "--delay": `${visualIndex * 90}ms` } as CSSProperties}><div className="podium-avatar"><PlayerMark row={row} rank={rank} /><span>#{rank + 1}</span></div><div className="podium-name"><strong>{row.fullName}</strong><small>{row.teamName} · {row.position}</small></div><div className="podium-score"><b>{impact(row)}</b><span>G + A</span></div><div className="podium-base"><i /><i /><i /></div></Link>;
+          })}</div> : <div className="signal-empty">Aún no hay rendimiento individual para mostrar.</div>}
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tabla goleadores · Top {topN}</CardTitle>
-              <CardSubtitle>Desempate: asistencias</CardSubtitle>
-            </CardHeader>
-            <CardBody className="!p-0">
-              <DataTable>
-                <TableHead>
-                  <tr>
-                    <Th className="w-10">#</Th>
-                    <Th>Jugador</Th>
-                    <Th>Equipo</Th>
-                    <Th className="text-right">PJ</Th>
-                    <Th className="text-right">G</Th>
-                    <Th className="w-[160px]"></Th>
-                  </tr>
-                </TableHead>
-                <TableBody>
-                  {byGoals.map((r, i) => (
-                    <Tr key={r.playerId} hoverable>
-                      <Td>
-                        <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${medalColor(
-                            i,
-                          )}`}
-                        >
-                          {i + 1}
-                        </span>
-                      </Td>
-                      <Td>
-                        <Link
-                          href={`/${sport}/players/${r.playerId}`}
-                          className="font-medium hover:underline text-slate-800 dark:text-slate-100"
-                        >
-                          {r.fullName}
-                        </Link>
-                        <div className="text-xs text-slate-500">
-                          {r.position}
-                        </div>
-                      </Td>
-                      <Td className="text-slate-600 dark:text-slate-300">
-                        <Badge tone="neutral">{r.teamName}</Badge>
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        {r.matchesPlayed}
-                      </Td>
-                      <Td className="text-right tabular-nums font-bold text-emerald-600 text-lg">
-                        {r.goals}
-                      </Td>
-                      <Td>
-                        <MiniGauge
-                          value={r.goals}
-                          max={maxG}
-                          tone="success"
-                        />
-                      </Td>
-                    </Tr>
-                  ))}
-                </TableBody>
-              </DataTable>
-            </CardBody>
-          </Card>
+        <section className="ranking-workbench sa-reveal">
+          <div className="workbench-copy"><span>02 / CAMPO DE RENDIMIENTO</span><h2>Leé la producción a tu manera.</h2><p>El ranking se reordena por una métrica, manteniendo el contexto de equipo, minutos y participación.</p></div>
+          <nav aria-label="Métrica de ranking" className="metric-switch">{([ ["goals", "Goles", "G"], ["assists", "Asistencias", "A"], ["ga", "Impacto", "G+A"] ] as const).map(([value, name, short]) => <Link key={value} href={`/${sport}/leaderboard?chart=${value}`} className={chart === value ? "metric-switch-active" : ""}><b>{short}</b><span>{name}</span></Link>)}</nav>
+          <div className="workbench-chart">{activeRows.length ? <StandingsBars data={activeRows.slice(0, 7).map((row) => ({ name: row.fullName, short: row.fullName.split(" ").slice(-1)[0], value: chart === "goals" ? row.goals : chart === "assists" ? row.assists : impact(row), max, metricLabel: chart === "goals" ? "G" : chart === "assists" ? "A" : "G+A", detail: `${row.teamName} · ${row.matchesPlayed} PJ`, variant: chart }))} /> : <div className="signal-empty">Sin datos.</div>}</div>
+        </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Tabla asistentes · Top {topN}</CardTitle>
-              <CardSubtitle>Desempate: goles</CardSubtitle>
-            </CardHeader>
-            <CardBody className="!p-0">
-              <DataTable>
-                <TableHead>
-                  <tr>
-                    <Th className="w-10">#</Th>
-                    <Th>Jugador</Th>
-                    <Th>Equipo</Th>
-                    <Th className="text-right">PJ</Th>
-                    <Th className="text-right">A</Th>
-                    <Th className="w-[160px]"></Th>
-                  </tr>
-                </TableHead>
-                <TableBody>
-                  {byAssists.map((r, i) => (
-                    <Tr key={r.playerId} hoverable>
-                      <Td>
-                        <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${medalColor(
-                            i,
-                          )}`}
-                        >
-                          {i + 1}
-                        </span>
-                      </Td>
-                      <Td>
-                        <Link
-                          href={`/${sport}/players/${r.playerId}`}
-                          className="font-medium hover:underline text-slate-800 dark:text-slate-100"
-                        >
-                          {r.fullName}
-                        </Link>
-                        <div className="text-xs text-slate-500">
-                          {r.position}
-                        </div>
-                      </Td>
-                      <Td className="text-slate-600 dark:text-slate-300">
-                        <Badge tone="neutral">{r.teamName}</Badge>
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        {r.matchesPlayed}
-                      </Td>
-                      <Td className="text-right tabular-nums font-bold text-indigo-600 text-lg">
-                        {r.assists}
-                      </Td>
-                      <Td>
-                        <MiniGauge
-                          value={r.assists}
-                          max={maxA}
-                          tone="primary"
-                        />
-                      </Td>
-                    </Tr>
-                  ))}
-                </TableBody>
-              </DataTable>
-            </CardBody>
-          </Card>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Jugadores más influyentes · G + A · Top {topN}
-            </CardTitle>
-            <CardSubtitle>
-              Suma ponderada de goles y asistencias. Impacto total.
-            </CardSubtitle>
-          </CardHeader>
-          <CardBody className="!p-0">
-            <DataTable>
-              <TableHead>
-                <tr>
-                  <Th className="w-10">#</Th>
-                  <Th>Jugador</Th>
-                  <Th>Equipo</Th>
-                  <Th className="text-right">PJ</Th>
-                  <Th className="text-right">Min</Th>
-                  <Th className="text-right">G</Th>
-                  <Th className="text-right">A</Th>
-                  <Th className="text-right">G+A</Th>
-                  <Th className="w-[200px]"></Th>
-                </tr>
-              </TableHead>
-              <TableBody>
-                {byGa.map((r, i) => (
-                  <Tr key={r.playerId} hoverable>
-                    <Td>
-                      <span
-                        className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${medalColor(
-                          i,
-                        )}`}
-                      >
-                        {i + 1}
-                      </span>
-                    </Td>
-                    <Td>
-                      <Link
-                        href={`/${sport}/players/${r.playerId}`}
-                        className="font-medium hover:underline text-slate-800 dark:text-slate-100"
-                      >
-                        {r.fullName}
-                      </Link>
-                      <div className="text-xs text-slate-500">{r.position}</div>
-                    </Td>
-                    <Td className="text-slate-600 dark:text-slate-300">
-                      <Badge tone="neutral">{r.teamName}</Badge>
-                    </Td>
-                    <Td className="text-right tabular-nums">
-                      {r.matchesPlayed}
-                    </Td>
-                    <Td className="text-right tabular-nums">{r.totalMinutes}</Td>
-                    <Td className="text-right tabular-nums font-semibold text-emerald-600">
-                      {r.goals}
-                    </Td>
-                    <Td className="text-right tabular-nums font-semibold text-indigo-600">
-                      {r.assists}
-                    </Td>
-                    <Td className="text-right tabular-nums font-black text-fuchsia-600 text-lg">
-                      {r.goals + r.assists}
-                    </Td>
-                    <Td>
-                      <MiniGauge
-                        value={r.goals + r.assists}
-                        max={maxGa}
-                        tone={i === 0 ? "success" : "primary"}
-                      />
-                    </Td>
-                  </Tr>
-                ))}
-              </TableBody>
-            </DataTable>
-          </CardBody>
-        </Card>
-
-        <Divider label="Disciplina" />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tarjetas · Top 10</CardTitle>
-            <CardSubtitle>
-              Índice: 1 punto por amarilla, 3 por roja
-            </CardSubtitle>
-          </CardHeader>
-          <CardBody className="!p-0">
-            {byCards.every((c) => c.yellowCards + c.redCards === 0) ? (
-              <div className="p-6 text-sm text-slate-400">
-                Sin tarjetas registradas en modo demo.
-              </div>
-            ) : (
-              <DataTable>
-                <TableHead>
-                  <tr>
-                    <Th className="w-10">#</Th>
-                    <Th>Jugador</Th>
-                    <Th>Equipo</Th>
-                    <Th className="text-right">TA</Th>
-                    <Th className="text-right">TR</Th>
-                    <Th className="text-right">Índice</Th>
-                  </tr>
-                </TableHead>
-                <TableBody>
-                  {byCards.map((r, i) => (
-                    <Tr key={r.playerId} hoverable>
-                      <Td>
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                          {i + 1}
-                        </span>
-                      </Td>
-                      <Td>
-                        <Link
-                          href={`/${sport}/players/${r.playerId}`}
-                          className="font-medium hover:underline text-slate-800 dark:text-slate-100"
-                        >
-                          {r.fullName}
-                        </Link>
-                      </Td>
-                      <Td>
-                        <Badge tone="neutral">{r.teamName}</Badge>
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        <Badge tone="warning">{r.yellowCards}</Badge>
-                      </Td>
-                      <Td className="text-right tabular-nums">
-                        <Badge tone="danger">{r.redCards}</Badge>
-                      </Td>
-                      <Td className="text-right tabular-nums font-bold text-amber-700 dark:text-amber-300">
-                        {r.yellowCards + r.redCards * 3}
-                      </Td>
-                    </Tr>
-                  ))}
-                </TableBody>
-              </DataTable>
-            )}
-          </CardBody>
-        </Card>
+        <section className="ranking-ledger sa-reveal">
+          <div className="ledger-head"><div><span>03 / REGISTRO DE RANKING</span><h2>{label} · clasificación viva</h2></div><p>La barra muestra la distancia respecto del valor más alto disponible.</p></div>
+          <div className="ledger-columns"><span>Pos.</span><span>Jugador / equipo</span><span>Producción</span><span>Ritmo</span></div>
+          <div className="ledger-list">{activeRows.map((row, index) => {
+            const value = chart === "goals" ? row.goals : chart === "assists" ? row.assists : impact(row);
+            return <Link key={row.playerId} href={`/${sport}/players/${row.playerId}`} className={`ledger-row ledger-row-${rankTone(index)} sa-reveal`} style={{ "--delay": `${Math.min(index * 34, 450)}ms` } as CSSProperties}><div className="ledger-rank"><b>{String(index + 1).padStart(2, "0")}</b><span>{index < 3 ? "TOP" : "RANK"}</span></div><div className="ledger-player"><PlayerMark row={row} rank={index} /><div><strong>{row.fullName}</strong><span>{row.teamName} · {row.position}</span></div></div><div className="ledger-production"><b>{value}</b><span>{chart === "goals" ? "goles" : chart === "assists" ? "asistencias" : "G + A"}</span><small>{row.goals}G · {row.assists}A · {row.matchesPlayed} PJ</small></div><div className="ledger-gauge"><MiniGauge value={value} max={max} tone={index === 0 ? "success" : "primary"} /></div></Link>;
+          })}</div>
+        </section></> : null}
       </Stack>
     </Container>
   );

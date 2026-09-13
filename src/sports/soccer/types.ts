@@ -1,4 +1,4 @@
-import type { Jsonb } from "@/types/db/tables";
+import type { Jsonb, PlayerInsert, TeamInsert } from "@/types/db/tables";
 
 export interface SoccerMatchSpecific extends Jsonb {
   attendance?: number;
@@ -73,6 +73,8 @@ export interface SoccerPlayerSeasonAggregate {
 
 export type SoccerMatchPayload = {
   external_id: string;
+  provider?: string;
+  last_synced_at?: string;
   league_id: string;
   season_id: string;
   home_team_id: string;
@@ -88,6 +90,8 @@ export type SoccerMatchPayload = {
     minutes_played: number;
     specific: SoccerPlayerStatsSpecific;
   }>;
+  teams?: TeamInsert[];
+  players?: PlayerInsert[];
 };
 
 export function isSoccerMatchSpecific(s: Jsonb): s is SoccerMatchSpecific {

@@ -3,7 +3,7 @@ import "@/lib/config/env";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   Sport, League, Season, Team, Player, Match, PlayerMatchStats, SportInsert, LeagueInsert, SeasonInsert, TeamInsert, PlayerInsert, MatchInsert, PlayerMatchStatsInsert } from "@/types/db/tables";
-import { getEnv } from "@/lib/config/env";
+import { getEnv, getSupabaseProjectUrl } from "@/lib/config/env";
 
 type Tables = { sports: Sport; leagues: League; seasons: Season; teams: Team; players: Player; matches: Match; player_match_stats: PlayerMatchStats; };
 export type TableName = keyof Tables;
@@ -44,7 +44,9 @@ function buildQueryBuilder<T extends AnyRow>(
 
   function chainApply() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q: any = sb.from(table as string);
+    // PostgREST expone filtros, orden y límite después de iniciar el select.
+    // Aplicarlos sobre `from()` hace que las consultas filtradas fallen.
+    let q: any = sb.from(table as string).select("*");
     for (const c of chain) {
       if (c.op === "eq") q = q.eq(c.key as string, c.value);
       else if (c.op === "in") q = q.in(c.key as string, c.value);
@@ -66,7 +68,7 @@ function buildQueryBuilder<T extends AnyRow>(
     limit: (n) => { limitN = n; return builder; },
     select: async () => {
       try {
-        const { data, error } = await chainApply().select("*");
+        const { data, error } = await chainApply();
         if (error) return { data: [], error: new Error(error.message) };
         return { data: (data ?? []) as T[], error: null };
       } catch (err) {
@@ -75,7 +77,7 @@ function buildQueryBuilder<T extends AnyRow>(
     },
     maybeSingle: async () => {
       try {
-        const { data, error } = await chainApply().select("*").limit(1).maybeSingle();
+        const { data, error } = await chainApply().limit(1).maybeSingle();
         if (error) return { data: null, error: new Error(error.message) };
         return { data: (data as T | null) ?? null, error: null };
       } catch (err) {
@@ -84,7 +86,7 @@ function buildQueryBuilder<T extends AnyRow>(
     },
     single: async () => {
       try {
-        const { data, error } = await chainApply().select("*").limit(1);
+        const { data, error } = await chainApply().limit(1);
         const rows = (data ?? []) as T[];
         if (error) return { data: undefined as unknown as T, error: new Error(error.message) };
         if (rows.length === 0) return { data: undefined as unknown as T, error: new Error("supabase-wrapper: single() empty") };
@@ -99,17 +101,26 @@ function buildQueryBuilder<T extends AnyRow>(
 
 export async function createSupabaseDbClient(): Promise<DbClient> {
   const env = getEnv();
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+  const projectUrl = getSupabaseProjectUrl();
+  if (!projectUrl || !env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("supabase-wrapper: missing credentials (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).");
   }
-  const sb = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  const sb = createClient(projectUrl, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+  let initialized = false;
   return {
     init: async () => {
+      if (initialized) return;
       try {
         const start = performance.now();
-        const { error } = await sb.from("sports").select("id", { count: "exact", head: true });
-        if (error) throw new Error(error.message);
-        console.log(`[DB] Supabase Cloud connected OK (${Math.round(performance.now() - start)}ms) · project=${new URL(env.NEXT_PUBLIC_SUPABASE_URL!).hostname}`);
+        const { count: sportsCount, error: sportsError } = await sb.from("sports").select("id", { count: "exact", head: true });
+        if (sportsError) throw new Error(sportsError.message);
+        const { count: matchesCount, error: matchesError } = await sb.from("matches").select("id", { count: "exact", head: true });
+        if (matchesError) throw new Error(matchesError.message);
+        if ((sportsCount ?? 0) === 0 && (matchesCount ?? 0) === 0) {
+          throw new Error("Supabase is reachable but has no Sports AI data; using demo fallback.");
+        }
+        console.log(`[DB] Supabase Cloud connected OK (${Math.round(performance.now() - start)}ms) · project=${new URL(projectUrl).hostname}`);
+        initialized = true;
         void TABLE_NAMES;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));

@@ -6,7 +6,7 @@ import {
   formatSeasonName,
 } from "@/components/sports/sport-helpers";
 import { ensureDbReady } from "@/lib/db/client";
-import { getLeaguesBySportId } from "@/lib/db/repositories/leagues-repo";
+import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamSquadRanking } from "@/lib/services/statistics-service";
 
 export default async function LeaderboardRoute({
@@ -22,14 +22,9 @@ export default async function LeaderboardRoute({
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();
-  const leagues = await getLeaguesBySportId(sport);
-  const mainLeague = leagues.find((l) => l.id === "demo-liga-1") ?? leagues[0];
-  const seasonId =
-    mainLeague?.id === "demo-liga-1"
-      ? "season-2026-1"
-      : mainLeague
-        ? `season-${mainLeague.id}`
-        : "";
+  const { active } = await getCompetitionSelectionState(sport);
+  const mainLeague = active?.league;
+  const seasonId = active?.season.id ?? "";
   const ranking =
     mainLeague && seasonId
       ? await getTeamSquadRanking(sport, mainLeague.id, seasonId)
@@ -41,7 +36,7 @@ export default async function LeaderboardRoute({
         name: mainLeague?.name ?? "Liga",
         country: mainLeague?.country,
       })}
-      seasonName={formatSeasonName(seasonId)}
+      seasonName={active?.season.name ?? formatSeasonName(seasonId)}
       squadRanking={ranking}
       chart={chart}
     />

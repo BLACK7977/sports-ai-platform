@@ -102,4 +102,87 @@ INSERT INTO players (id, sport_id, team_id, full_name, short_name, position, jer
   ('p-zorros-cf-3','soccer','zorros-cf','Santi Rodríguez','S. Rodríguez','Mediocampista',8,'ARG','{"preferred_foot":"right","height_cm":176}')
 ON CONFLICT (id) DO NOTHING;
 
+-- Completa las plantillas demo a 20 jugadores por equipo (200 en total).
+-- Las 30 fichas nominales anteriores se preservan; estas filas sólo agregan las faltantes.
+INSERT INTO players (
+  id, sport_id, team_id, full_name, short_name, position,
+  jersey_number, nationality, sport_specific
+)
+SELECT
+  format('p-%s-%s', t.id, n),
+  'soccer',
+  t.id,
+  format('Jugador %s %s', initcap(replace(t.id, '-', ' ')), n),
+  format('J. %s', n),
+  CASE
+    WHEN n <= 2 THEN 'Portero'
+    WHEN n <= 8 THEN 'Defensa'
+    WHEN n <= 14 THEN 'Mediocampista'
+    ELSE 'Delantero'
+  END,
+  n,
+  CASE n % 3 WHEN 0 THEN 'ARG' WHEN 1 THEN 'BRA' ELSE 'ESP' END,
+  jsonb_build_object(
+    'preferred_foot', CASE WHEN n % 2 = 0 THEN 'right' ELSE 'left' END,
+    'height_cm', 170 + ((n * 7) % 30)
+  )
+FROM teams t
+CROSS JOIN generate_series(1, 20) AS n
+WHERE t.id IN (
+  'aguilas-fc','leones-united','dragones-cf','halcones-sc','tiburones-ac',
+  'toros-fc','lobos-cd','gavilanes-ad','pumas-sd','zorros-cf'
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- 30 fixtures futuros de Copa Demo: 20 existentes + 30 programados = 50 partidos.
+WITH extra_fixtures (n, home_team_id, away_team_id) AS (
+  VALUES
+    (1,'toros-fc','lobos-cd'), (2,'toros-fc','gavilanes-ad'), (3,'toros-fc','pumas-sd'), (4,'toros-fc','zorros-cf'),
+    (5,'lobos-cd','gavilanes-ad'), (6,'lobos-cd','pumas-sd'), (7,'lobos-cd','zorros-cf'),
+    (8,'gavilanes-ad','pumas-sd'), (9,'gavilanes-ad','zorros-cf'), (10,'pumas-sd','zorros-cf'),
+    (11,'lobos-cd','toros-fc'), (12,'gavilanes-ad','toros-fc'), (13,'pumas-sd','toros-fc'), (14,'zorros-cf','toros-fc'),
+    (15,'gavilanes-ad','lobos-cd'), (16,'pumas-sd','lobos-cd'), (17,'zorros-cf','lobos-cd'),
+    (18,'pumas-sd','gavilanes-ad'), (19,'zorros-cf','gavilanes-ad'), (20,'zorros-cf','pumas-sd'),
+    (21,'toros-fc','lobos-cd'), (22,'toros-fc','gavilanes-ad'), (23,'toros-fc','pumas-sd'), (24,'toros-fc','zorros-cf'),
+    (25,'lobos-cd','gavilanes-ad'), (26,'lobos-cd','pumas-sd'), (27,'lobos-cd','zorros-cf'),
+    (28,'gavilanes-ad','pumas-sd'), (29,'gavilanes-ad','zorros-cf'), (30,'pumas-sd','zorros-cf')
+)
+INSERT INTO matches (
+  id, sport_id, league_id, season_id, home_team_id, away_team_id,
+  match_date, status, external_id, sport_specific
+)
+SELECT
+  format('m-extra-%s', n),
+  'soccer', 'demo-liga-2', 'season-2026-copa', home_team_id, away_team_id,
+  ('2026-08-01 19:00:00+00'::timestamptz + ((n - 1) * interval '1 day')),
+  'scheduled', format('ext-m-extra-%s', n), jsonb_build_object('round', n)
+FROM extra_fixtures
+ON CONFLICT (id) DO NOTHING;
+
+-- Estadísticas de los 20 partidos finalizados: 11 jugadores por equipo = 440 filas.
+INSERT INTO player_match_stats (
+  id, match_id, player_id, team_id, minutes_played, sport_specific
+)
+SELECT
+  format('s-%s-%s', m.id, p.id),
+  m.id,
+  p.id,
+  p.team_id,
+  CASE WHEN p.jersey_number = 1 THEN 90 ELSE 50 + ((p.jersey_number * 7) % 45) END,
+  jsonb_build_object(
+    'goals', CASE WHEN p.position = 'Delantero' AND p.jersey_number % 7 = 0 THEN 1 ELSE 0 END,
+    'assists', CASE WHEN p.jersey_number % 11 = 0 THEN 1 ELSE 0 END,
+    'yellow_cards', CASE WHEN p.jersey_number % 19 = 0 THEN 1 ELSE 0 END,
+    'red_cards', 0,
+    'shots', (p.jersey_number * 3) % 5,
+    'passes', 20 + ((p.jersey_number * 5) % 60),
+    'pass_accuracy_pct', 65 + ((p.jersey_number * 7) % 33),
+    'side', CASE WHEN p.team_id = m.home_team_id THEN 'home' ELSE 'away' END
+  )
+FROM matches m
+JOIN players p ON p.team_id IN (m.home_team_id, m.away_team_id)
+WHERE m.status IN ('finished', 'in_progress')
+  AND p.jersey_number BETWEEN 1 AND 11
+ON CONFLICT (id) DO NOTHING;
+
 COMMIT;

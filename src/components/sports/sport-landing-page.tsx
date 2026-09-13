@@ -12,14 +12,17 @@ import { Container, Stack, Row } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { getLeaguesBySportId } from "@/lib/db/repositories/leagues-repo";
-import { getMatchesBySportId } from "@/lib/db/repositories/matches-repo";
-import { countPlayers } from "@/lib/db/repositories/players-repo";
+import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
+import { getMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";
+import { getPlayersByTeamIds } from "@/lib/db/repositories/players-repo";
+import { getTeamsByLeagueId } from "@/lib/db/repositories/teams-repo";
 import {
   getTeamStandings,
   getPlayerSeasonRanking,
 } from "@/lib/services/statistics-service";
 import { StandingsBars, TeamFormStrip } from "@/components/charts/svg-charts";
 import { ensureDbReady } from "@/lib/db/client";
+import { CompetitionSelector } from "@/components/sports/competition-selector";
 
 export default async function SportLandingPage({
   sport,
@@ -31,49 +34,49 @@ export default async function SportLandingPage({
 
   await ensureDbReady();
   const sportDef = has.sport;
-  const [leagues, matches, totalPlayers] = await Promise.all([
+  const { active, candidates } = await getCompetitionSelectionState(sport);
+  const mainLeague = active?.league;
+  const mainSeason = active?.season.id ?? "";
+  const [leagues, matches, teams, standings, topPlayers] = await Promise.all([
     getLeaguesBySportId(sport),
-    getMatchesBySportId(sport),
-    countPlayers(),
+    mainLeague && mainSeason
+      ? getMatchesByLeagueSeason(mainLeague.id, mainSeason)
+      : Promise.resolve([]),
+    mainLeague ? getTeamsByLeagueId(mainLeague.id) : Promise.resolve([]),
+    mainLeague && mainSeason
+      ? getTeamStandings(sport, mainLeague.id, mainSeason)
+      : Promise.resolve([]),
+    mainLeague && mainSeason
+      ? getPlayerSeasonRanking(sport, mainLeague.id, mainSeason)
+      : Promise.resolve([]),
   ]);
-
-  const mainLeague = leagues.find((l) => l.id === "demo-liga-1") ?? leagues[0];
-  const mainSeason = mainLeague?.id === "demo-liga-1" ? "season-2026-1" : (mainLeague ? `season-${mainLeague.id}` : "");
-  const standings = mainLeague && mainSeason
-    ? await getTeamStandings(sport, mainLeague.id, mainSeason)
-    : [];
-
-  const topPlayers = mainLeague && mainSeason
-    ? (await getPlayerSeasonRanking(sport, mainLeague.id, mainSeason)).slice(0, 5)
-    : [];
+  const competitionPlayers = new Set(
+    (await getPlayersByTeamIds(teams.map((team) => team.id))).map(
+      (player) => player.id,
+    ),
+  );
 
   const finished = matches.filter((m) => m.status === "finished").length;
   const scheduled = matches.filter((m) => m.status === "scheduled").length;
 
   return (
-    <Container size="wide">
+    <Container size="wide" className="cyber-page cyber-dashboard">
       <Stack gap="xl">
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div className="space-y-2">
-            <Row>
-              <Badge tone="primary">
-                <span className="mr-1">{sportDef.emoji}</span>
-                {sportDef.displayName}
-              </Badge>
-              <Badge tone="info">{leagues.length} ligas</Badge>
-              <Badge tone="neutral">{totalPlayers} jugadores</Badge>
-            </Row>
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white">
-              {sportDef.displayName} · Centro de estadísticas
-            </h1>
-            <p className="text-slate-500 max-w-2xl">
-              Tabla de posiciones, fixtures, pronósticos y reportes de jugador
-              con IA. Datos demo offline listos para explorar.
-            </p>
+        <header className="dashboard-hero">
+          <div className="dashboard-hero-copy">
+            <div className="dashboard-kicker"><i /> CENTRO DE RENDIMIENTO · {sportDef.emoji} {sportDef.displayName}</div>
+            <h1>{sportDef.displayName}<span> / Control de rendimiento</span></h1>
+            <p>Resultados, forma y producción de la competición organizados para leer cada señal con contexto.</p>
+            <div className="dashboard-signal-row">
+              <span><b>{mainLeague?.name ?? "Competición"}</b><small>Liga activa</small></span>
+              <span><b>{mainLeague?.country ?? "—"}</b><small>País / región</small></span>
+              <span><b>{matches.length}</b><small>Partidos indexados</small></span>
+            </div>
           </div>
-          <Row className="flex-wrap">
+          <Row className="dashboard-actions flex-wrap">
+            <CompetitionSelector sportId={sport} active={active} candidates={candidates} />
             <LinkButton href={`/${sport}/matches`} tone="primary" size="md">
-              Fixtures
+              Abrir Match Center →
             </LinkButton>
             <LinkButton href={`/${sport}/standings`} tone="outline" size="md">
               Tabla
@@ -87,8 +90,9 @@ export default async function SportLandingPage({
           </Row>
         </header>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card>
+        <section className="dashboard-section-heading"><span>01 / COMPETITION PULSE</span><p>Resumen instantáneo de la actividad actual</p></section>
+        <div className="dashboard-metrics">
+          <Card className="dashboard-metric dashboard-metric-cyan">
             <CardBody>
               <div className="text-xs text-slate-500">Partidos totales</div>
               <div className="text-3xl font-bold">{matches.length}</div>
@@ -98,39 +102,38 @@ export default async function SportLandingPage({
               </Row>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="dashboard-metric dashboard-metric-violet">
             <CardBody>
-              <div className="text-xs text-slate-500">Ligas</div>
+              <div className="text-xs text-slate-500">Competiciones disponibles</div>
               <div className="text-3xl font-bold">{leagues.length}</div>
               <div className="text-xs text-slate-500 mt-2 truncate">
-                {leagues.map((l) => l.name).join(" · ")}
+                En SPORTS AI
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="dashboard-metric dashboard-metric-green">
             <CardBody>
-              <div className="text-xs text-slate-500">Equipos Liga1</div>
+              <div className="text-xs text-slate-500">Equipos de la competición</div>
               <div className="text-3xl font-bold">{standings.length}</div>
               <div className="text-xs text-emerald-600 mt-2">
                 Líder: {standings[0]?.teamName ?? "—"}
               </div>
             </CardBody>
           </Card>
-          <Card>
+          <Card className="dashboard-metric dashboard-metric-sky">
             <CardBody>
-              <div className="text-xs text-slate-500">Jugadores únicos</div>
-              <div className="text-3xl font-bold">
-                {new Set(matches.flatMap((m) => [m.home_team_id, m.away_team_id])).size === 0 ? totalPlayers : totalPlayers}
-              </div>
+              <div className="text-xs text-slate-500">Jugadores en planteles</div>
+              <div className="text-3xl font-bold">{competitionPlayers.size}</div>
               <div className="text-xs text-slate-500 mt-2">
-                Plantillas completas demo
+                Asociados a la competición activa
               </div>
             </CardBody>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <Card className="lg:col-span-3">
+        <section className="dashboard-section-heading"><span>02 / LEAGUE READOUT</span><p>Jerarquía de clubes y producción ofensiva</p></section>
+        <div className="dashboard-data-grid">
+          <Card className="dashboard-panel dashboard-standings lg:col-span-3">
             <CardHeader
               action={
                 <LinkButton size="sm" tone="ghost" href={`/${sport}/standings`}>
@@ -200,7 +203,7 @@ export default async function SportLandingPage({
             </CardBody>
           </Card>
 
-          <Card className="lg:col-span-2">
+          <Card className="dashboard-panel dashboard-players lg:col-span-2">
             <CardHeader
               action={
                 <LinkButton size="sm" tone="ghost" href={`/${sport}/leaderboard`}>
@@ -216,7 +219,7 @@ export default async function SportLandingPage({
                 {topPlayers.length === 0 ? (
                   <li className="text-sm text-slate-400">Sin datos.</li>
                 ) : (
-                  topPlayers.map((p, i) => (
+                  topPlayers.slice(0, 5).map((p, i) => (
                     <li
                       key={p.playerId}
                       className="py-3 grid grid-cols-[32px_1fr_auto] items-center gap-3"

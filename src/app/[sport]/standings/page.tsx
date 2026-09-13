@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import StandingsPage from "@/components/sports/standings/standings-page";
 import { getHasSport, formatLeagueName, formatSeasonName } from "@/components/sports/sport-helpers";
 import { ensureDbReady } from "@/lib/db/client";
-import { getLeaguesBySportId } from "@/lib/db/repositories/leagues-repo";
+import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamStandings } from "@/lib/services/statistics-service";
 
 export default async function StandingsRoute({
@@ -14,14 +14,9 @@ export default async function StandingsRoute({
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();
-  const leagues = await getLeaguesBySportId(sport);
-  const mainLeague = leagues.find((l) => l.id === "demo-liga-1") ?? leagues[0];
-  const mainSeason =
-    mainLeague?.id === "demo-liga-1"
-      ? "season-2026-1"
-      : mainLeague
-        ? `season-${mainLeague.id}`
-        : "";
+  const { active } = await getCompetitionSelectionState(sport);
+  const mainLeague = active?.league;
+  const mainSeason = active?.season.id ?? "";
   const standings =
     mainLeague && mainSeason
       ? await getTeamStandings(sport, mainLeague.id, mainSeason)
@@ -34,7 +29,7 @@ export default async function StandingsRoute({
         name: mainLeague?.name ?? "Liga",
         country: mainLeague?.country,
       })}
-      seasonName={formatSeasonName(mainSeason)}
+      seasonName={active?.season.name ?? formatSeasonName(mainSeason)}
       standings={standings}
     />
   );

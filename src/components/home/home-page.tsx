@@ -15,6 +15,8 @@ import {
 } from "@/lib/db/repositories/matches-repo";
 import { countPlayers } from "@/lib/db/repositories/players-repo";
 import { getAllLeagues as getLeagues } from "@/lib/db/repositories/leagues-repo";
+import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
+import { getTeamsByIds } from "@/lib/db/repositories/teams-repo";
 import { getActiveSports } from "@/lib/config/sports-registry";
 import { ensureDbReady } from "@/lib/db/client";
 
@@ -27,21 +29,28 @@ const features = [
 
 export default async function HomePage() {
   await ensureDbReady();
-  const [matchesCount, playersCount, leagues, sports] = await Promise.all([
+  const [matchesCount, playersCount, leagues, sports, competitionState] = await Promise.all([
     countMatches(),
     countPlayers(),
     getLeagues(),
     Promise.resolve(getActiveSports()),
+    getCompetitionSelectionState("soccer"),
   ]);
+  const activeCompetition = competitionState.active;
 
-  const demoMatches =
-    leagues.length > 0
-      ? await getMatchesByLeagueSeason(
-          leagues[0].id,
-          leagues[0].id === "demo-liga-1" ? "season-2026-1" : "season-2026-2",
-        )
-      : [];
-  const lastMatches = demoMatches.slice(0, 5);
+  const activeMatches = activeCompetition
+    ? await getMatchesByLeagueSeason(
+        activeCompetition.league.id,
+        activeCompetition.season.id,
+      )
+    : [];
+  const activeTeamIds = [...new Set(activeMatches.flatMap((match) => [match.home_team_id, match.away_team_id]))];
+  const activeTeams = await getTeamsByIds(activeTeamIds);
+  const activeTeamMap = new Map(activeTeams.map((team) => [team.id, team.name]));
+  const lastMatches = activeMatches.slice(0, 5);
+  const activeCompetitionLabel = activeCompetition
+    ? `${activeCompetition.league.name} · ${activeCompetition.season.name}`
+    : "Competición activa";
 
   return (
     <div className="home-stage">
@@ -63,17 +72,17 @@ export default async function HomePage() {
                 <LinkButton href="/soccer/matches" tone="ghost" size="lg" className="home-ghost-button">Ver partidos</LinkButton>
               </Row>
               <div className="home-proof-row">
-                <span><strong>{matchesCount}</strong> partidos indexados</span>
-                <span><strong>{playersCount}</strong> perfiles disponibles</span>
-                <span><strong>{leagues.length}</strong> competiciones</span>
+                <span><strong>{matchesCount}</strong> partidos en SPORTS AI</span>
+                <span><strong>{playersCount}</strong> perfiles de jugadores</span>
+                <span><strong>{leagues.length}</strong> competiciones disponibles</span>
               </div>
             </div>
-            <div className="home-signal-panel" aria-label="Estado de datos demo">
-              <div className="home-panel-top"><span>LIVE DATA / 01</span><span className="home-panel-status">DEMO FEED</span></div>
+            <div className="home-signal-panel" aria-label="Estado de la competición activa">
+              <div className="home-panel-top"><span>COMPETICIÓN ACTIVA</span><span className="home-panel-status">FÚTBOL</span></div>
               <div className="home-signal-ring"><span>AI</span></div>
-              <div className="home-panel-reading"><span>Lectura del sistema</span><strong>Datos listos para explorar</strong></div>
+              <div className="home-panel-reading"><span>Lectura del sistema</span><strong>{activeCompetitionLabel}</strong></div>
               <div className="home-signal-bars" aria-hidden><i /><i /><i /><i /><i /><i /><i /></div>
-              <p>Las métricas demo están identificadas y pueden reemplazarse por datos de Supabase sin cambiar la interfaz.</p>
+              <p>Los últimos resultados corresponden exclusivamente a esta competición y temporada.</p>
             </div>
           </header>
 
@@ -97,14 +106,14 @@ export default async function HomePage() {
             <Card className="lg:col-span-2 home-surface">
               <CardHeader action={<LinkButton href="/soccer/matches" size="sm" tone="ghost">Ver todos</LinkButton>}>
                 <CardTitle>Últimos resultados</CardTitle>
-                <CardSubtitle>Demo Liga Apertura · señal de actividad</CardSubtitle>
+                <CardSubtitle>{activeCompetitionLabel} · actividad reciente</CardSubtitle>
               </CardHeader>
               <CardBody>
                 <Stack gap="sm">
                   {lastMatches.length === 0 ? <p className="text-sm text-slate-400">No hay partidos para mostrar.</p> : lastMatches.map((match) => {
                     const badge = formatBadgeForStatus(match.status);
-                    const home = match.home_team_id.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
-                    const away = match.away_team_id.replaceAll("-", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+                    const home = activeTeamMap.get(match.home_team_id) ?? match.home_team_id;
+                    const away = activeTeamMap.get(match.away_team_id) ?? match.away_team_id;
                     return <Link key={match.id} href={`/soccer/matches/${match.id}`} className="home-match-row">
                       <span className="home-match-date">{new Date(match.match_date).toLocaleDateString()}</span>
                       <span className="home-match-team home-match-team-right">{home}</span>

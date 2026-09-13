@@ -30,6 +30,18 @@ export async function getStatsByMatchId(matchId: string): Promise<PlayerMatchSta
   return data;
 }
 
+/** Fetches a season's match statistics in one request for aggregate rankings. */
+export async function getStatsByMatchIds(matchIds: string[]): Promise<PlayerMatchStats[]> {
+  if (matchIds.length === 0) return [];
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<PlayerMatchStats>("player_match_stats")
+    .in("match_id", matchIds)
+    .order("minutes_played", "desc")
+    .select();
+  return data;
+}
+
 export async function getStatsByPlayerId(playerId: string): Promise<PlayerMatchStats[]> {
   const db = await ensureDbReady();
   const { data } = await db

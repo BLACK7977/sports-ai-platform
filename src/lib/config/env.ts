@@ -30,6 +30,14 @@ const envSchema = z.object({
     (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
     z.string().optional(),
   ),
+  SPORTMONKS_API_TOKEN: z.preprocess(
+    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
+    z.string().optional(),
+  ),
+  SPORTMONKS_BASE_URL: z.preprocess(
+    (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
+    z.string().url().optional(),
+  ),
 
   OPENAI_API_KEY: z.preprocess(
     (v) => (typeof v === "string" && v.length > 0 ? v : undefined),
@@ -61,6 +69,8 @@ function parseEnv(): Env {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SPORTMONKS_API_TOKEN: process.env.SPORTMONKS_API_TOKEN,
+    SPORTMONKS_BASE_URL: process.env.SPORTMONKS_BASE_URL,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
     ENABLE_OFFLINE_MODE: process.env.ENABLE_OFFLINE_MODE,
@@ -99,10 +109,28 @@ export function hasSupabase(): boolean {
   }
 }
 
+/**
+ * Supabase JS espera la URL raíz del proyecto. Aceptamos también la URL
+ * histórica del endpoint REST para no obligar a cambiar configuraciones ya
+ * existentes (https://<project>.supabase.co/rest/v1).
+ */
+export function getSupabaseProjectUrl(): string | undefined {
+  const url = getEnv().NEXT_PUBLIC_SUPABASE_URL;
+  return url?.replace(/\/?rest\/v1\/?$/, "").replace(/\/$/, "");
+}
+
 export function hasOpenAI(): boolean {
   try {
     const e = getEnv();
     return Boolean(e.OPENAI_API_KEY);
+  } catch {
+    return false;
+  }
+}
+
+export function hasSportmonks(): boolean {
+  try {
+    return Boolean(getEnv().SPORTMONKS_API_TOKEN);
   } catch {
     return false;
   }

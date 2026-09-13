@@ -24,6 +24,18 @@ export async function getSeasonsByLeagueId(leagueId: string): Promise<Season[]> 
   return data;
 }
 
+/** Fetches seasons for several leagues in one query to avoid route-level N+1 reads. */
+export async function getSeasonsByLeagueIds(leagueIds: string[]): Promise<Season[]> {
+  if (leagueIds.length === 0) return [];
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<Season>("seasons")
+    .in("league_id", leagueIds)
+    .order("start_date", "desc")
+    .select();
+  return data;
+}
+
 export async function getCurrentSeason(leagueId: string): Promise<Season | null> {
   const db = await ensureDbReady();
   const { data } = await db

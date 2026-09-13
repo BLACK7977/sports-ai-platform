@@ -1,113 +1,184 @@
 export function StandingsBars({
   data,
-  width = 520,
-  height = 240,
 }: {
   data: Array<{
     name: string;
     short: string;
     value: number;
     max: number;
+    metricLabel?: string;
+    detail?: string;
+    variant?: "goals" | "assists" | "ga";
   }>;
   width?: number;
   height?: number;
 }) {
-  const padLeft = 82;
-  const padRight = 30;
-  const padTop = 14;
-  const padBottom = 24;
-  const usableW = width - padLeft - padRight;
-  const usableH = height - padTop - padBottom;
-  const barGap = 8;
-  const n = data.length || 1;
-  const barH = Math.max(8, (usableH - barGap * (n - 1)) / n);
   const max = Math.max(1, ...data.map((d) => Math.max(d.max, d.value)));
-  const gridTicks = 5;
+  return (
+    <div className="standings-tech-bars space-y-2.5 font-mono">
+      {data.map((d, i) => {
+        const pct = Math.min(100, Math.max(0, Math.round((d.value / max) * 100)));
+        const isLeader = i === 0;
+        const color = d.variant === "assists"
+          ? "bg-violet-400"
+          : d.variant === "ga"
+            ? "bg-fuchsia-400"
+            : "bg-cyan-400";
+        const valueColor = d.variant === "assists"
+          ? "text-violet-300"
+          : d.variant === "ga"
+            ? "text-fuchsia-300"
+            : "text-cyan-300";
+        return (
+          <div key={`${d.name}-${i}`} className={`group p-2 rounded bg-slate-900/40 border border-slate-800/60 transition ${d.variant === "assists" ? "hover:border-violet-400/40" : d.variant === "ga" ? "hover:border-fuchsia-400/40" : "hover:border-cyan-500/30"}`}>
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <div className="flex items-center gap-2.5">
+                <span className={`text-[11px] font-bold w-4 text-center ${isLeader ? "text-cyan-400" : "text-slate-500"}`}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className={`font-medium ${isLeader ? `${valueColor} font-semibold` : "text-slate-200"}`}>
+                  {d.name}
+                </span>
+                <span className="text-slate-500 text-[10px] uppercase tracking-wider hidden sm:inline">
+                  {d.short}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`font-bold tabular-nums text-sm ${valueColor}`}>
+                  {d.value}
+                </span>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider">{d.metricLabel ?? "VAL"}</span>
+              </div>
+            </div>
+            {d.detail ? <div className="mb-1 text-[10px] font-mono text-slate-500">{d.detail}</div> : null}
+            <div className="h-1.5 w-full bg-slate-800/90 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${isLeader ? color : i < 3 ? color.replace("400", "500") : "bg-slate-600"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
-  const colorFor = (i: number) => {
-    if (i === 0) return "#6366f1";
-    if (i === 1) return "#8b5cf6";
-    if (i === 2) return "#ec4899";
-    return "#38bdf8";
-  };
+export function MatchPointsComparison({
+  homeName,
+  homeShort,
+  homePoints,
+  homePosition,
+  awayName,
+  awayShort,
+  awayPoints,
+  awayPosition,
+  maxPoints = 12,
+}: {
+  homeName: string;
+  homeShort: string;
+  homePoints: number;
+  homePosition?: number;
+  awayName: string;
+  awayShort: string;
+  awayPoints: number;
+  awayPosition?: number;
+  maxPoints?: number;
+}) {
+  const max = Math.max(maxPoints, homePoints, awayPoints, 1);
+  const homePct = Math.min(100, Math.max(0, Math.round((homePoints / max) * 100)));
+  const awayPct = Math.min(100, Math.max(0, Math.round((awayPoints / max) * 100)));
 
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label="Gráfico de barras de puntos por equipo"
-      className="block w-full max-w-2xl mx-auto h-auto"
-    >
-      {Array.from({ length: gridTicks + 1 }).map((_, i) => {
-        const x = padLeft + (usableW * i) / gridTicks;
-        const val = Math.round((max * i) / gridTicks);
-        return (
-          <g key={`g-${i}`}>
-            <line
-              x1={x}
-              x2={x}
-              y1={padTop}
-              y2={padTop + usableH}
-              stroke="#e2e8f0"
-              strokeDasharray="3 3"
-            />
-            <text
-              x={x}
-              y={height - 8}
-              fontSize={10}
-              textAnchor="middle"
-              fill="#94a3b8"
-            >
-              {val}
-            </text>
-          </g>
-        );
-      })}
+    <div className="match-points-comparison-box" aria-label="Comparación de puntos en la tabla">
+      <div className="match-points-item">
+        <div className="match-points-head">
+          <div className="match-points-team">
+            <span className="match-points-role match-points-role-home">LOCAL</span>
+            <strong>{homeShort || homeName}</strong>
+            {homePosition ? <span className="match-points-position">#{homePosition}</span> : null}
+          </div>
+          <div className="match-points-value">
+            <span>{homePoints}</span><small>PTS</small>
+          </div>
+        </div>
+        <div className="match-points-track" aria-hidden="true">
+          <div className="match-points-fill match-points-fill-home" style={{ width: `${homePct}%` }}><i /></div>
+        </div>
+      </div>
 
-      {data.map((d, i) => {
-        const y = padTop + i * (barH + barGap);
-        const w = (usableW * d.value) / max;
-        return (
-          <g key={`b-${d.name}-${i}`}>
-            <text
-              x={padLeft - 8}
-              y={y + barH / 2 + 4}
-              fontSize={12}
-              textAnchor="end"
-              fill="#334155"
-              fontWeight={600}
-            >
-              {d.short || d.name}
-            </text>
-            <rect
-              x={padLeft}
-              y={y}
-              width={usableW}
-              height={barH}
-              rx={4}
-              fill="#f1f5f9"
-            />
-            <rect
-              x={padLeft}
-              y={y}
-              width={w}
-              height={barH}
-              rx={4}
-              fill={colorFor(i)}
-            />
-            <text
-              x={padLeft + w + 6}
-              y={y + barH / 2 + 4}
-              fontSize={11}
-              fill="#0f172a"
-              fontWeight={600}
-            >
-              {d.value}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+      <div className="match-points-item">
+        <div className="match-points-head">
+          <div className="match-points-team">
+            <span className="match-points-role match-points-role-away">VISITA</span>
+            <strong>{awayShort || awayName}</strong>
+            {awayPosition ? <span className="match-points-position">#{awayPosition}</span> : null}
+          </div>
+          <div className="match-points-value match-points-value-away">
+            <span>{awayPoints}</span><small>PTS</small>
+          </div>
+        </div>
+        <div className="match-points-track" aria-hidden="true">
+          <div className="match-points-fill match-points-fill-away" style={{ width: `${awayPct}%` }}><i /></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MatchProbabilityBar({
+  homeProb,
+  drawProb,
+  awayProb,
+  homeLabel,
+  awayLabel,
+}: {
+  homeProb: number;
+  drawProb: number;
+  awayProb: number;
+  homeLabel: string;
+  awayLabel: string;
+}) {
+  const total = Math.max(1, homeProb + drawProb + awayProb);
+  const homePct = (homeProb / total) * 100;
+  const drawPct = (drawProb / total) * 100;
+  const awayPct = (awayProb / total) * 100;
+
+  return (
+    <div className="match-prob-wrap space-y-2.5">
+      <div className="grid grid-cols-3 text-center font-mono">
+        <div className="text-left">
+          <div className="text-xs text-slate-400 truncate">{homeLabel}</div>
+          <div className="text-lg font-bold text-cyan-400 tabular-nums">{Math.round(homeProb)}%</div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-400">Empate</div>
+          <div className="text-lg font-bold text-slate-300 tabular-nums">{Math.round(drawProb)}%</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-slate-400 truncate">{awayLabel}</div>
+          <div className="text-lg font-bold text-sky-400 tabular-nums">{Math.round(awayProb)}%</div>
+        </div>
+      </div>
+
+      <div className="h-2 w-full flex rounded-full overflow-hidden bg-slate-800/80 gap-0.5 p-0.5">
+        <div
+          className="h-full bg-cyan-400 rounded-l-full transition-all duration-300"
+          style={{ width: `${homePct}%` }}
+          title={`${homeLabel}: ${Math.round(homeProb)}%`}
+        />
+        <div
+          className="h-full bg-slate-500 transition-all duration-300"
+          style={{ width: `${drawPct}%` }}
+          title={`Empate: ${Math.round(drawProb)}%`}
+        />
+        <div
+          className="h-full bg-sky-400 rounded-r-full transition-all duration-300"
+          style={{ width: `${awayPct}%` }}
+          title={`${awayLabel}: ${Math.round(awayProb)}%`}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -285,29 +356,29 @@ export function MiniGauge({
   const w = 120;
   const h = 8;
   const colors: Record<typeof tone, string> = {
-    primary: "#6366f1",
+    primary: "#00e5ff",
     success: "#10b981",
-    warning: "#eab308",
+    warning: "#f59e0b",
     danger: "#ef4444",
   };
   return (
-    <div className="inline-flex flex-col gap-1">
+    <div className="inline-flex flex-col gap-1 w-full">
       {label ? (
-        <div className="text-xs text-slate-500 flex justify-between w-full">
-          <span>{label}</span>
-          <span className="font-medium text-slate-700">
-            {Math.round(value)} / {max}
+        <div className="text-xs text-slate-400 flex justify-between w-full font-mono">
+          <span className="truncate">{label}</span>
+          <span className="font-semibold text-slate-200 tabular-nums ml-1">
+            {Math.round(value)}%
           </span>
         </div>
       ) : null}
-      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} className="w-full max-w-28 h-auto">
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} className="w-full h-auto">
         <rect
           x={0}
           y={0}
           width={w}
           height={h}
           rx={h / 2}
-          fill="#e2e8f0"
+          fill="rgba(255, 255, 255, 0.1)"
         />
         <rect
           x={0}

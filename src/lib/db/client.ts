@@ -114,14 +114,10 @@ export async function ensureDbReady(): Promise<DbClient> {
     return client;
   } catch (err) {
     if (client.isOffline()) throw err;
-
-    cachedClient = buildStoreOfflineClient();
-    await cachedClient.init();
-    console.warn(
-      "[DB] Supabase unavailable; using IN-MEMORY OFFLINE fallback: " +
-        (err instanceof Error ? err.message : String(err)),
-    );
-    return cachedClient;
+    // Con credenciales configuradas, nunca sustituimos datos reales por demo.
+    // El modo demo se elige explícitamente con ENABLE_OFFLINE_MODE=true o
+    // aparece cuando no hay configuración de Supabase.
+    throw err;
   }
 }
 

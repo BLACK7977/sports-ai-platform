@@ -25,6 +25,8 @@ export interface League {
   name: string;
   country: string;
   external_id?: string;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;
@@ -39,6 +41,9 @@ export interface Season {
   start_date: string;
   end_date: string;
   is_current: boolean;
+  external_id?: string;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;
@@ -54,6 +59,8 @@ export interface Team {
   short_name: string;
   logo_url?: string;
   external_id?: string;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;
@@ -72,6 +79,8 @@ export interface Player {
   nationality?: string;
   date_of_birth?: string;
   external_id?: string;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;
@@ -91,6 +100,8 @@ export interface Match {
   home_score?: number;
   away_score?: number;
   external_id?: string;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;
@@ -104,6 +115,8 @@ export interface PlayerMatchStats {
   player_id: string;
   team_id: string;
   minutes_played: number;
+  provider?: string;
+  last_synced_at?: string;
   created_at: string;
   updated_at: string;
   sport_specific: Jsonb;

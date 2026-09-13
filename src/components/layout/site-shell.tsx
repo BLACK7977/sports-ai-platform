@@ -5,6 +5,7 @@ import { Container, Row } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
 import { getFeatureFlag } from "@/lib/config/feature-flags";
 import { hasSupabase } from "@/lib/config/env";
+import { SportsNavigation } from "@/components/layout/sports-navigation";
 
 function dbStatusBadge() {
   const offline = getFeatureFlag("ENABLE_OFFLINE_MODE") === true;
@@ -33,7 +34,7 @@ function dbStatusBadge() {
 export function SiteHeader() {
   const sports = getActiveSports();
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+    <header className="sticky top-0 z-40 border-b border-cyan-100/10 bg-[#050d18]/88 backdrop-blur">
       <Container size="wide" className="h-16 flex items-center justify-between gap-4">
         <Link
           href="/"
@@ -41,7 +42,7 @@ export function SiteHeader() {
         >          <span className="brand-mark" aria-hidden><span>⚽</span></span>
           <span className="brand-wordmark">SPORTS <b>AI</b></span>
         </Link>
-        <nav className="hidden sm:flex items-center gap-1 text-sm">
+        <nav className="hidden lg:flex items-center gap-1 text-sm">
           <Link href="/" className="inline-flex items-center rounded-lg px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800">Inicio</Link>
           {sports.slice(0, 4).map((sport) => (
             <Link key={sport.id} href={`/${sport.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800 transition" prefetch={false}>
@@ -49,7 +50,8 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <details className="relative sm:hidden">
+        <SportsNavigation variant="header" />
+        <details className="hidden">
           <summary className="list-none cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-200">Menú</summary>
           <div className="absolute right-0 top-12 z-50 grid min-w-44 gap-1 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <Link href="/" className="rounded-lg px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-800">Inicio</Link>
@@ -67,7 +69,7 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950/40">
+    <footer className="site-footer-signal mt-16 border-t border-cyan-100/10 bg-[#050d18]/80">
       <Container size="wide" className="py-10 text-sm text-slate-500 dark:text-slate-400">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <div>© {new Date().getFullYear()} Sports AI Platform — MVP</div>
@@ -87,7 +89,8 @@ export function SiteShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-full flex-col">
       <SiteHeader />
-      <main className="flex-1 py-8">{children}</main>
+      <main className="sports-app-main flex-1 py-8">{children}</main>
+      <SportsNavigation variant="mobile" />
       <SiteFooter />
     </div>
   );

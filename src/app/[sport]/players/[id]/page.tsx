@@ -5,7 +5,8 @@ import {
   formatSeasonName,
 } from "@/components/sports/sport-helpers";
 import { ensureDbReady } from "@/lib/db/client";
-import { getLeaguesBySportId } from "@/lib/db/repositories/leagues-repo";
+import { getActiveCompetitionForLeague } from "@/lib/db/repositories/active-competition-repo";
+import { getLeagueById } from "@/lib/db/repositories/leagues-repo";
 import { getPlayerById } from "@/lib/db/repositories/players-repo";
 import { getTeamById } from "@/lib/db/repositories/teams-repo";
 import {
@@ -27,18 +28,10 @@ export default async function PlayerDetailRoute({
   const player = await getPlayerById(id);
   if (!player) notFound();
   const team = await getTeamById(player.team_id);
-  const leagues = await getLeaguesBySportId(sport);
-  const mainLeague =
-    leagues.find((l) => l.id === "demo-liga-1") ??
-    leagues.find((l) => l.id === team?.league_id) ??
-    leagues[0];
-  const leagueId = mainLeague?.id ?? "demo-liga-1";
-  const seasonId =
-    mainLeague?.id === "demo-liga-1"
-      ? "season-2026-1"
-      : mainLeague
-        ? `season-${mainLeague.id}`
-        : "season-2026-1";
+  const league = team ? await getLeagueById(team.league_id) : null;
+  const competition = league ? await getActiveCompetitionForLeague(league) : null;
+  const leagueId = competition?.league.id ?? team?.league_id ?? "";
+  const seasonId = competition?.season.id ?? "";
 
   const [seasonRank, careerStats] = await Promise.all([
     getPlayerSeasonRanking(sport, leagueId, seasonId),
@@ -59,7 +52,7 @@ export default async function PlayerDetailRoute({
       sport={sport}
       leagueId={leagueId}
       seasonId={seasonId}
-      seasonName={formatSeasonName(seasonId)}
+      seasonName={competition?.season.name ?? formatSeasonName(seasonId)}
       player={player}
       team={team}
       seasonAgg={seasonAgg}

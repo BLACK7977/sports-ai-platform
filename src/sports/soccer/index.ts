@@ -3,6 +3,8 @@ import type { DataSource, EntityMapper, StatCalculator } from "@/types/core/data
 import { soccerConfig, type SoccerConfig } from "./config";
 import { soccerMatchMapper } from "./mappers";
 import { soccerMockSource } from "./data-sources/mock-source";
+import { soccerStatsBombOpenDataSource } from "./data-sources/statsbomb-open-data-source";
+import { soccerSportmonksSource } from "./data-sources/sportmonks-argentina-source";
 import {
   soccerStandingsCalculator,
   soccerPlayerAggregateCalculator,
@@ -17,6 +19,8 @@ const soccerModule: SportModule<SoccerConfig> = {
   routesPath: "/soccer",
   dataSources: {
     mock: soccerMockSource as unknown as DataSource<unknown, unknown>,
+    statsbomb: soccerStatsBombOpenDataSource as unknown as DataSource<unknown, unknown>,
+    sportmonks: soccerSportmonksSource as unknown as DataSource<unknown, unknown>,
   },
   mappers: {
     match: soccerMatchMapper as unknown as EntityMapper<unknown, unknown>,

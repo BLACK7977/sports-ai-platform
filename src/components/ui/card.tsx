@@ -10,7 +10,7 @@ export function Card({ as = "div", className = "", ...rest }: Props) {
     <Tag
       {...rest}
       className={[
-        "rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm",
+        "sa-panel rounded-sm border border-cyan-100/12 bg-[#071321]/92 shadow-[0_16px_38px_rgba(0,0,0,0.18)]",
         className,
       ].join(" ")}
     />
@@ -29,7 +29,7 @@ export function CardHeader({
   return (
     <div
       className={[
-        "flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-200 dark:border-slate-800",
+        "flex items-start justify-between gap-3 px-5 py-4 border-b border-cyan-100/10",
         className,
       ].join(" ")}
     >
@@ -49,7 +49,7 @@ export function CardTitle({
   return (
     <h3
       className={[
-        "text-base font-semibold text-slate-900 dark:text-slate-100",
+        "text-base font-semibold text-slate-100",
         className,
       ].join(" ")}
     >
@@ -68,7 +68,7 @@ export function CardSubtitle({
   return (
     <p
       className={[
-        "text-sm text-slate-500 dark:text-slate-400",
+        "text-sm text-slate-400",
         className,
       ].join(" ")}
     >
@@ -86,7 +86,7 @@ export function CardBody({
 }) {
   return (
     <div
-      className={["px-5 py-4 text-slate-800 dark:text-slate-200", className].join(" ")}
+      className={["px-5 py-4 text-slate-200", className].join(" ")}
     >
       {children}
     </div>

@@ -14,6 +14,19 @@ export async function getMatchById(id: string): Promise<Match | null> {
   return data;
 }
 
+export async function getMatchByExternalId(
+  sportId: string,
+  externalId: string,
+): Promise<Match | null> {
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<Match>("matches")
+    .eq("sport_id", sportId)
+    .eq("external_id", externalId)
+    .maybeSingle();
+  return data;
+}
+
 export async function getMatchesByLeagueSeason(
   leagueId: string,
   seasonId: string,
@@ -24,6 +37,42 @@ export async function getMatchesByLeagueSeason(
     .eq("league_id", leagueId)
     .eq("season_id", seasonId)
     .order("match_date", "desc")
+    .select();
+  return data;
+}
+
+/** Date-bounded match read used by the Match Center's time views. */
+export async function getMatchesByLeagueSeasonDateRange(
+  leagueId: string,
+  seasonId: string,
+  from: string,
+  to: string,
+): Promise<Match[]> {
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<Match>("matches")
+    .eq("league_id", leagueId)
+    .eq("season_id", seasonId)
+    .gte("match_date", from)
+    .lte("match_date", to)
+    .order("match_date", "asc")
+    .select();
+  return data;
+}
+
+export async function getMatchesByLeagueSeasonStatuses(
+  leagueId: string,
+  seasonId: string,
+  statuses: Match["status"][],
+): Promise<Match[]> {
+  if (statuses.length === 0) return [];
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<Match>("matches")
+    .eq("league_id", leagueId)
+    .eq("season_id", seasonId)
+    .in("status", statuses)
+    .order("match_date", "asc")
     .select();
   return data;
 }
@@ -58,14 +107,11 @@ export async function upsertMatchByExternalId(
   row: MatchInsert,
 ): Promise<Match | null> {
   const db = await ensureDbReady();
-  const existing = await db
-    .from<Match>("matches")
-    .eq("sport_id", sportId)
-    .eq("external_id", externalId)
-    .maybeSingle();
-  if (existing.data) {
-    const merged: MatchInsert = { ...row, id: existing.data.id };
+  const existing = await getMatchByExternalId(sportId, externalId);
+  if (existing) {
+    const merged: MatchInsert = { ...row, id: existing.id };
     const r = await db.upsert("matches", merged, "id");
+    if (r.error) throw r.error;
     return (r.data as Match | null) ?? null;
   }
   const r = await db.upsert(
@@ -73,6 +119,7 @@ export async function upsertMatchByExternalId(
     { ...row, external_id: externalId, sport_id: sportId },
     "id",
   );
+  if (r.error) throw r.error;
   return (r.data as Match | null) ?? null;
 }
 

@@ -9,61 +9,102 @@ export class MockLlmProvider implements LLMProvider {
   readonly name = "Mock LLM Provider (offline fixtures)";
 
   private pick(msgs: ChatMessage[]): string {
-    const joined = msgs
-      .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
-      .join("\n\n")
-      .toLowerCase();
+    const rawContent = msgs.map((m) => m.content).join("\n\n");
+    const joined = rawContent.toLowerCase();
 
     if (joined.includes("análisis del partido") || joined.includes("match analysis")) {
+      const resultMatch = rawContent.match(/Resultado FINAL:\s*(.*?)\s+(\d+)\s*-\s*(\d+)\s+([^\n]+)/i);
+      const homeTeam = resultMatch ? resultMatch[1].trim() : "Equipo Local";
+      const hs = resultMatch ? parseInt(resultMatch[2], 10) : 1;
+      const as = resultMatch ? parseInt(resultMatch[3], 10) : 0;
+      const awayTeam = resultMatch ? resultMatch[4].trim() : "Equipo Visitante";
+
+      const outcomeText = hs > as
+        ? `Victoria de ${homeTeam} por ${hs}-${as}, capitalizando sus llegadas en campo rival.`
+        : hs < as
+          ? `Victoria de ${awayTeam} por ${as}-${hs}, imponiendo orden táctico y contundencia.`
+          : `Empate ${hs}-${as} tras un trámite parejo y disputado en ambos tiempos.`;
+
       return JSON.stringify({
-        summary:
-          "Partido disputado y tácticamente equilibrado en el mediocampo. El equipo local aprovechó un contraataque a los 72' para sentenciar el encuentro tras un error defensivo del visitante.",
+        summary: `Análisis del cruce entre ${homeTeam} y ${awayTeam}. ${outcomeText}`,
         keyInsights: [
-          "El 60% de la posesión favoreció al local sin traducirse en claras ocasiones hasta el 2T.",
-          "Ambos equipos sumaron 8 tarjetas amarillas; partido físicamente intenso.",
-          "El visitante falló 2 ocasiones claras de cabeza en el primer tiempo.",
-          "Cambio de esquema del local (4-3-3 → 4-2-3-1) en el entretiempo fue decisivo.",
+          `${homeTeam} administró transiciones progresivas en la zona media.`,
+          `${awayTeam} buscó profundidad aprovechando los repliegues defensivos.`,
+          `Marcador final (${hs}-${as}) acorde al volumen de ocasiones generadas.`,
+          "Lectura disciplinaria y física con intensidad constante a lo largo del partido.",
         ],
-        narrative:
-          "Arrancó dominado por la visita, que generó varias llegadas sin gol. A mitad del 1T el equipo local se acomodó y encontró ritmo. El 0-0 aguantó hasta bien entrado el 2T, cuando una pérdida en la salida del balón visitante provocó el contraataque ganador. El visitante reaccionó pero no logró igualar. Partido con mucho ritmo, pocos goles pero mucho contenido táctico.",
+        narrative: `El duelo entre ${homeTeam} y ${awayTeam} ofreció un choque dinámico con respuestas estratégicas en ambos bandos. ${homeTeam} intentó imponer ritmo en los minutos iniciales, mientras ${awayTeam} respondió cerrando líneas y apostando a la aceleración en las bandas. El ${hs}-${as} definitivo consolida las señales de forma observadas en la temporada.`,
       });
     }
 
     if (joined.includes("predicción") || joined.includes("prediction")) {
+      const localMatch = rawContent.match(/LOCAL:\s*([^\n(]+)/i);
+      const visitaMatch = rawContent.match(/VISITA:\s*([^\n(]+)/i);
+      const homeName = localMatch ? localMatch[1].trim() : "Local";
+      const awayName = visitaMatch ? visitaMatch[1].trim() : "Visitante";
+
+      const ptsHMatch = rawContent.match(new RegExp(`${homeName}[^\\n]*?PTS=(\\d+)`, "i"));
+      const ptsAMatch = rawContent.match(new RegExp(`${awayName}[^\\n]*?PTS=(\\d+)`, "i"));
+      const ptsH = ptsHMatch ? parseInt(ptsHMatch[1], 10) : 5;
+      const ptsA = ptsAMatch ? parseInt(ptsAMatch[1], 10) : 4;
+
+      let homeWinProb = 42;
+      let drawProb = 30;
+      let awayWinProb = 28;
+      let predH = 2;
+      let predA = 1;
+      let explanation = `Pronóstico basado en las señales de forma: ${homeName} (${ptsH} pts) y ${awayName} (${ptsA} pts) presentan un cruce competitivo. Marcador más probable: ${predH}-${predA}.`;
+
+      if (ptsH > ptsA + 2) {
+        homeWinProb = 52;
+        drawProb = 26;
+        awayWinProb = 22;
+        predH = 2;
+        predA = 0;
+        explanation = `Pronóstico favorable al anfitrión: ${homeName} lidera en puntos (${ptsH} pts) frente a ${awayName} (${ptsA} pts) y suma ventaja de localía. Resultado proyectado: ${predH}-${predA}.`;
+      } else if (ptsA > ptsH + 2) {
+        homeWinProb = 28;
+        drawProb = 28;
+        awayWinProb = 44;
+        predH = 1;
+        predA = 2;
+        explanation = `Pronóstico con ventaja visitante: ${awayName} llega con mayor puntaje acumulado (${ptsA} pts) ante ${homeName} (${ptsH} pts), equilibrado por el factor cancha. Resultado proyectado: ${predH}-${predA}.`;
+      }
+
       return JSON.stringify({
-        predictedHomeScore: 2,
-        predictedAwayScore: 1,
-        homeWinProbability: 48,
-        drawProbability: 27,
-        awayWinProbability: 25,
-        explanation:
-          "Pronóstico basado en la forma reciente de ambos equipos: el local suma 9 puntos en los últimos 4 partidos y mantiene 2 partidos consecutivos sin encajar goles de local. El visitante suele sufrir en los 15' finales de cada mitad. Resultado más probable: 2-1 local.",
+        predictedHomeScore: predH,
+        predictedAwayScore: predA,
+        homeWinProbability: homeWinProb,
+        drawProbability: drawProb,
+        awayWinProbability: awayWinProb,
+        explanation,
       });
     }
 
     if (joined.includes("jugador") || joined.includes("player")) {
+      const nameMatch = rawContent.match(/JUGADOR:\s*([^\n(]+)/i);
+      const playerName = nameMatch ? nameMatch[1].trim() : "El jugador";
+
       return JSON.stringify({
         strengths: [
-          "Excelente toma de decisiones en el último tercio del campo.",
-          "Regate uno contra uno de alto rendimiento (78% de efectividad).",
-          "Lectura táctica superior al promedio de la liga; anticipa 3-4 jugadas por partido.",
+          `Toma de decisiones tácticas en el último tercio del campo para ${playerName}.`,
+          "Precisión en pases progresivos y cambios de orientación.",
+          "Lectura de juego para anticipar segundas jugadas en zona media.",
         ],
         weaknesses: [
-          "Acierto en centros por banda por debajo de la media liga (22%).",
-          "Defensivamente no cubre bien la espalda de su lateral cuando se adelanta.",
-          "Resistencia: en los últimos 10' cae un 18% su intensidad.",
+          "Margen de mejora en la recuperación bajo presión alta.",
+          "Cobertura de espacios defensivos en transiciones rápidas.",
+          "Consistencia en la entrega durante el último cuarto de hora.",
         ],
-        performanceSummary:
-          "Temporada muy sólida: 6 goles y 8 asistencias en 22 partidos jugados. Jugador decisivo en los partidos más difíciles; registra +1.2 G+A por 90 min en enfrentamientos contra equipos top-5.",
-        outlook:
-          "Pronóstico positivo: manteniendo la forma actual proyecta 12 goles + 14 asistencias al cierre de temporada. Ideal para sistema 4-3-3 como interior derecho o ala.",
+        performanceSummary: `Muestra rendimiento consistente dentro de su rol, aportando regularidad en minutos y participación colectiva durante la presente campaña.`,
+        outlook: `Proyección positiva orientada a consolidar su impacto en el esquema del equipo durante las próximas jornadas.`,
       });
     }
 
     return JSON.stringify({
       ok: true,
       message:
-        "Mock LLM: prompt no coincidió con patrones conocidos. Respuesta genérica válida para health check.",
+        "Mock LLM: prompt procesado con fallback genérico.",
     });
   }
 
