@@ -125,3 +125,39 @@ export type PlayerMatchStatsInsert = Partial<
   Pick<PlayerMatchStats, "id" | "created_at" | "updated_at">
 > &
   Omit<PlayerMatchStats, "id" | "created_at" | "updated_at">;
+
+/** Fila de predictions (migration 004/005/006). Solo lectura desde la app. */
+export interface Prediction {
+  id: number;
+  match_id: string;
+  market_id: string;
+  model_version_id: string;
+  model_probabilities: Jsonb;
+  odds_used: Jsonb | null;
+  odds_snapshot_id: number | null;
+  bookmaker_id: string | null;
+  edge_home: number | null;
+  edge_draw: number | null;
+  edge_away: number | null;
+  ev_home: number | null;
+  ev_draw: number | null;
+  ev_away: number | null;
+  sports_ai_score: number | null;
+  score_version: string | null;
+  score_components: Jsonb | null;
+  data_snapshot: Jsonb;
+  predicted_at: string;
+  kickoff_at: string;
+}
+
+/** Fila de prediction_evaluations (migration 004). Solo lectura desde la app. */
+export interface PredictionEvaluation {
+  id: number;
+  prediction_id: number;
+  actual_outcome: string;
+  is_correct: boolean;
+  match_result: Jsonb;
+  evaluated_at: string;
+  evaluator: string;
+  evaluation_version: number;
+}

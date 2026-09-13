@@ -14,6 +14,13 @@ export async function getMatchById(id: string): Promise<Match | null> {
   return data;
 }
 
+export async function getMatchesByIds(ids: string[]): Promise<Match[]> {
+  if (ids.length === 0) return [];
+  const db = await ensureDbReady();
+  const { data } = await db.from<Match>("matches").in("id", ids).select();
+  return data;
+}
+
 export async function getMatchByExternalId(
   sportId: string,
   externalId: string,

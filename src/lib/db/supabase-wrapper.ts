@@ -1,14 +1,23 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
-  Sport, League, Season, Team, Player, Match, PlayerMatchStats, SportInsert, LeagueInsert, SeasonInsert, TeamInsert, PlayerInsert, MatchInsert, PlayerMatchStatsInsert } from "@/types/db/tables";
+  Sport, League, Season, Team, Player, Match, PlayerMatchStats, Prediction, PredictionEvaluation, SportInsert, LeagueInsert, SeasonInsert, TeamInsert, PlayerInsert, MatchInsert, PlayerMatchStatsInsert } from "@/types/db/tables";
 import { getEnv, getSupabaseProjectUrl } from "@/lib/config/env";
 
-type Tables = { sports: Sport; leagues: League; seasons: Season; teams: Team; players: Player; matches: Match; player_match_stats: PlayerMatchStats; };
+type Tables = { sports: Sport; leagues: League; seasons: Season; teams: Team; players: Player; matches: Match; player_match_stats: PlayerMatchStats; predictions: Prediction; prediction_evaluations: PredictionEvaluation; };
 export type TableName = keyof Tables;
-const TABLE_NAMES: TableName[] = ["sports","leagues","seasons","teams","players","matches","player_match_stats"];
+const TABLE_NAMES: TableName[] = ["sports","leagues","seasons","teams","players","matches","player_match_stats","predictions","prediction_evaluations"];
 type OrderDir = "asc" | "desc";
-type AnyRow = Sport | League | Season | Team | Player | Match | PlayerMatchStats;
+type AnyRow =
+  | Sport
+  | League
+  | Season
+  | Team
+  | Player
+  | Match
+  | PlayerMatchStats
+  | Prediction
+  | PredictionEvaluation;
 type AnyInsert = SportInsert | LeagueInsert | SeasonInsert | TeamInsert | PlayerInsert | MatchInsert | PlayerMatchStatsInsert;
 
 export interface QueryBuilder<T> {

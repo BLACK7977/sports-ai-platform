@@ -6,6 +6,8 @@ import type {
   Player,
   Match,
   PlayerMatchStats,
+  Prediction,
+  PredictionEvaluation,
   SportInsert,
   LeagueInsert,
   SeasonInsert,
@@ -24,6 +26,8 @@ type Tables = {
   players: Player;
   matches: Match;
   player_match_stats: PlayerMatchStats;
+  predictions: Prediction;
+  prediction_evaluations: PredictionEvaluation;
 };
 
 export type TableName = keyof Tables;
@@ -36,6 +40,8 @@ const TABLE_NAMES: TableName[] = [
   "players",
   "matches",
   "player_match_stats",
+  "predictions",
+  "prediction_evaluations",
 ];
 
 type OrderDir = "asc" | "desc";
@@ -66,6 +72,8 @@ class InMemoryStoreImpl {
     players: new Map(),
     matches: new Map(),
     player_match_stats: new Map(),
+    predictions: new Map(),
+    prediction_evaluations: new Map(),
   };
   private initialized = false;
 
@@ -164,11 +172,12 @@ class InMemoryStoreImpl {
     const id = this.resolveId(table, row, uniqueKey);
     const existing = rows.get(id);
     const now = new Date().toISOString();
+    const prevCreatedAt = (existing as unknown as { created_at?: string } | undefined)?.created_at;
     const fullRow: Tables[TN] = {
       ...(existing ?? ({} as Tables[TN])),
       ...(row as unknown as Tables[TN]),
       id,
-      created_at: existing?.created_at ?? ("created_at" in row && (row as { created_at?: string }).created_at ? (row as { created_at: string }).created_at : now),
+      created_at: prevCreatedAt ?? ("created_at" in row && (row as { created_at?: string }).created_at ? (row as { created_at: string }).created_at : now),
       updated_at: now,
     } as Tables[TN];
     rows.set(id, fullRow);
