@@ -13,6 +13,12 @@ export interface UserProfile {
   role: UserRole;
 }
 
+/** Resultado tipado de lectura de perfil. Distingue ok/missing/error. */
+export type ProfileResult =
+  | { status: "ok"; profile: UserProfile }
+  | { status: "missing" }
+  | { status: "error"; message: string };
+
 /** Cliente mínimo inyectable (tests/fakes). Compatible con Supabase SSR. */
 export interface SessionAuthClient {
   auth: {
@@ -52,21 +58,37 @@ export async function getCurrentUser(
   return { id: data.user.id, email: data.user.email ?? null };
 }
 
-/** null si no hay perfil o no es legible. Nunca lanza por RLS denegado. */
+/**
+ * Lee el perfil del usuario. Distingue explícitamente:
+ * - ok: perfil válido
+ * - missing: usuario sin perfil (no existe fila)
+ * - error: fallo de lectura (Supabase, RLS, red, etc.)
+ *
+ * Nunca lanza. Fail-closed para premium.
+ */
 export async function getCurrentProfile(
   userId: string,
   client?: SessionAuthClient,
-): Promise<UserProfile | null> {
+): Promise<ProfileResult> {
   let supabase: SessionAuthClient;
   try {
     supabase = client ?? (await defaultClient());
   } catch (err) {
-    if (err instanceof AuthConfigError) return null;
-    throw err;
+    if (err instanceof AuthConfigError) return { status: "error", message: "Auth no configurada." };
+    console.error("[auth] getCurrentProfile: client creation failed.", err);
+    return { status: "error", message: "No se pudo conectar al servicio de auth." };
   }
   const { data, error } = await supabase.from("profiles").select("user_id, role").eq("user_id", userId).maybeSingle();
-  if (error || !data || !isValidRole(data.role)) return null;
-  return { userId, role: data.role };
+  if (error) {
+    console.error("[auth] getCurrentProfile: query failed.", error);
+    return { status: "error", message: "No se pudo leer el perfil." };
+  }
+  if (!data) return { status: "missing" };
+  if (!isValidRole(data.role)) {
+    console.error("[auth] getCurrentProfile: invalid role value.", data.role);
+    return { status: "error", message: "Perfil con rol inválido." };
+  }
+  return { status: "ok", profile: { userId, role: data.role } };
 }
 
 export class AuthRequiredError extends Error {
@@ -92,12 +114,39 @@ export async function requireAuth(client?: SessionAuthClient): Promise<SessionUs
 
 /**
  * Lanza AuthRequiredError sin sesión, PremiumRequiredError sin rol premium.
+ * Fail-closed: error de lectura → NO permite premium.
  * El rol se lee SIEMPRE server-side desde profiles; jamás de body/cookies
  * manipulables ni de metadata editable por el cliente.
  */
 export async function requirePremium(client?: SessionAuthClient): Promise<{ user: SessionUser; profile: UserProfile }> {
   const user = await requireAuth(client);
-  const profile = await getCurrentProfile(user.id, client);
-  if (!profile || profile.role !== "premium") throw new PremiumRequiredError();
-  return { user, profile };
+  const result = await getCurrentProfile(user.id, client);
+  if (result.status !== "ok" || result.profile.role !== "premium") throw new PremiumRequiredError();
+  return { user, profile: result.profile };
+}
+
+// ── Pure helpers (reused by header, premium gate, tests) ──
+
+/** Resuelve el plan visible en el header desde un ProfileResult. */
+export function resolveHeaderPlan(result: ProfileResult): UserRole | null {
+  return result.status === "ok" ? result.profile.role : null;
+}
+
+/** Resultado del gating premium. */
+export type PremiumAccess =
+  | { allowed: true; role: UserRole }
+  | { allowed: false; reason: "free" | "missing" | "error" };
+
+/**
+ * Resuelve acceso premium desde un ProfileResult (puro, sin side-effects).
+ * Fail-closed: missing/error → denied.
+ */
+export function resolvePremiumAccess(result: ProfileResult): PremiumAccess {
+  if (result.status !== "ok") {
+    return { allowed: false, reason: result.status };
+  }
+  if (result.profile.role === "premium") {
+    return { allowed: true, role: "premium" };
+  }
+  return { allowed: false, reason: "free" };
 }

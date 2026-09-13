@@ -28,6 +28,7 @@
     "smoke:launch2b": "tsx --conditions=react-server src/lib/scripts/smoke-tests-launch2b.ts",
     "smoke:launch2c": "tsx --conditions=react-server src/lib/scripts/smoke-tests-launch2c.ts",
     "smoke:sprint3": "tsx --conditions=react-server src/lib/scripts/smoke-tests-sprint3.ts",
+    "smoke:sprint31": "tsx --conditions=react-server src/lib/scripts/smoke-tests-sprint31.ts",
     "smoke:env": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-init.ts",
     "smoke:env-flags": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-flags.ts",
     "e2e": "node scripts/e2e-smoke.mjs"

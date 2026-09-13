@@ -132,9 +132,12 @@ async function runTests(): Promise<void> {
   check("M2f: definer con search_path fijo y schema-qualified", /SECURITY DEFINER SET search_path = public/.test(migration) && /INSERT INTO public\.profiles/.test(migration));
 
   console.log("\n--- N. Resolución de rol ---");
-  check("N1: free resuelto", (await getCurrentProfile("u1", fakeClient({ id: "u1" }, "free")))?.role === "free");
-  check("N2: premium resuelto", (await getCurrentProfile("u1", fakeClient({ id: "u1" }, "premium")))?.role === "premium");
-  check("N3: role inválido en DB → null", (await getCurrentProfile("u1", fakeClient({ id: "u1" }, "admin"))) === null);
+  const nFree = await getCurrentProfile("u1", fakeClient({ id: "u1" }, "free"));
+  check("N1: free resuelto", nFree.status === "ok" && nFree.status === "ok" && nFree.profile.role === "free");
+  const nPrem = await getCurrentProfile("u1", fakeClient({ id: "u1" }, "premium"));
+  check("N2: premium resuelto", nPrem.status === "ok" && nPrem.status === "ok" && nPrem.profile.role === "premium");
+  const nInvalid = await getCurrentProfile("u1", fakeClient({ id: "u1" }, "admin"));
+  check("N3: role inválido en DB → error", nInvalid.status === "error");
 
   console.log("\n--- O/P/Q. Redirects seguros ---");
   check("O: interno permitido", isSafeNextPath("/soccer/premium-test") && safeNextPath("/soccer/premium-test") === "/soccer/premium-test");

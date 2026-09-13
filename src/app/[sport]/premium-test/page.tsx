@@ -6,18 +6,20 @@ import { LinkButton } from "@/components/ui/button";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import {
   getCurrentUser,
-  requirePremium,
-  AuthRequiredError,
-  PremiumRequiredError,
+  getCurrentProfile,
+  resolvePremiumAccess,
 } from "@/lib/auth/session";
 import { parseSportId } from "@/lib/config/validation";
+import { UpgradeCard } from "@/components/auth/upgrade-card";
+import { PremiumPreview } from "@/components/auth/premium-preview";
 
 /**
- * Ruta premium de prueba (Sprint 3). El gating es 100% server-side:
- * ocultar botones en el frontend NO cuenta como seguridad.
- * - Sin sesión → redirect a /login?next=<ruta>
- * - FREE → estado upgrade (200, sin contenido premium)
- * - PREMIUM → contenido permitido
+ * Ruta premium de prueba. Gating 100% server-side, una sola lectura de profile.
+ * - Sin sesión → redirect
+ * - ok + free → UpgradeCard + previews
+ * - ok + premium → contenido permitido
+ * - missing → neutral, sin CTA, acceso bloqueado
+ * - error → neutral, sin CTA, acceso bloqueado
  */
 export default async function PremiumTestRoute({
   params,
@@ -33,36 +35,38 @@ export default async function PremiumTestRoute({
     redirect(`/login?next=/${sport}/premium-test`);
   }
 
-  let isPremium = false;
-  try {
-    await requirePremium();
-    isPremium = true;
-  } catch (err) {
-    if (!(err instanceof PremiumRequiredError) && !(err instanceof AuthRequiredError)) throw err;
-  }
+  const profileResult = await getCurrentProfile(user.id);
+  const access = resolvePremiumAccess(profileResult);
 
-  if (!isPremium) {
+  if (access.allowed) {
     return (
       <Container size="narrow" className="product-page">
         <Stack gap="lg" className="py-8">
-          <Card className="match-panel">
+          <div className="flex items-center gap-3">
+            <Badge tone="success" className="text-[10px] tracking-wider uppercase">
+              PREMIUM ACTIVO
+            </Badge>
+            <span className="text-xs text-slate-500">
+              Acceso verificado server-side.
+            </span>
+          </div>
+          <Card className="match-panel match-intelligence-module">
             <CardHeader className="match-module-header">
               <CardTitle>
-                <span className="module-kicker">PLAN FREE</span> Contenido Premium
+                <span className="module-kicker">PREMIUM</span> Zona de prueba
               </CardTitle>
-              <CardSubtitle>Tu plan actual no incluye esta sección.</CardSubtitle>
+              <CardSubtitle>
+                Tu rol Pro fue validado en el servidor. Aquí vivirán los análisis avanzados.
+              </CardSubtitle>
             </CardHeader>
             <CardBody>
               <div className="match-empty-state">
-                Esta es una zona Premium de prueba. Los análisis avanzados, las
-                probabilidades completas y los insights del modelo estarán
-                disponibles con el plan Pro.
+                <p className="text-sm text-slate-300">
+                  Acceso completo a las herramientas Premium de Sports AI.
+                  Los análisis del modelo, probabilidades y factores avanzados
+                  estarán disponibles aquí.
+                </p>
               </div>
-              <Row className="mt-4">
-                <LinkButton href={`/${sport}`} tone="outline" size="md">
-                  ← Volver
-                </LinkButton>
-              </Row>
             </CardBody>
           </Card>
         </Stack>
@@ -70,26 +74,73 @@ export default async function PremiumTestRoute({
     );
   }
 
+  if (access.reason === "free") {
+    return (
+      <Container size="narrow" className="product-page">
+        <Stack gap="lg" className="py-8">
+          <div className="flex items-center gap-3">
+            <Badge tone="info" className="text-[10px] tracking-wider uppercase">
+              ZONA PRO
+            </Badge>
+            <span className="text-xs text-slate-500">
+              Acceso restringido a usuarios Pro.
+            </span>
+          </div>
+          <UpgradeCard />
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-slate-300">
+              Esto es lo que desbloqueás con Pro:
+            </h3>
+            <PremiumPreview
+              title="Probabilidades del Modelo"
+              description="Dixon-Coles con factores de localía, forma y más."
+            />
+            <PremiumPreview
+              title="Análisis Profundo"
+              description="Insights detallados por partido y tendencias del modelo."
+            />
+          </div>
+          <Row className="mt-2">
+            <LinkButton href={`/${sport}`} tone="outline" size="md">
+              ← Volver a {sport === "soccer" ? "Fútbol" : sport}
+            </LinkButton>
+          </Row>
+        </Stack>
+      </Container>
+    );
+  }
+
+  // missing or error → neutral, no CTA, access blocked
   return (
     <Container size="narrow" className="product-page">
       <Stack gap="lg" className="py-8">
         <Card className="match-panel">
           <CardHeader className="match-module-header">
             <CardTitle>
-              <span className="module-kicker">PREMIUM</span> Zona de prueba
+              <span className="module-kicker">ZONA PRO</span>{" "}
+              {access.reason === "missing" ? "Perfil no encontrado" : "Error de perfil"}
             </CardTitle>
             <CardSubtitle>
-              Acceso verificado server-side para {user.email ?? "tu cuenta"}.
+              No pudimos determinar tu plan en este momento.
             </CardSubtitle>
           </CardHeader>
           <CardBody>
             <div className="match-empty-state">
-              <Badge tone="success">Pro activo</Badge>
-              <p className="mt-2">
-                Si ves esto, tu rol premium fue validado en el servidor. Aquí
-                vivirán los análisis avanzados.
+              <Badge
+                tone={access.reason === "missing" ? "warning" : "danger"}
+                className="text-[10px] tracking-wider uppercase"
+              >
+                {access.reason === "missing" ? "Perfil no encontrado" : "Error"}
+              </Badge>
+              <p className="mt-2 text-sm text-slate-300">
+                No pudimos cargar tu plan. Intentá nuevamente más tarde.
               </p>
             </div>
+            <Row className="mt-4">
+              <LinkButton href={`/${sport}`} tone="outline" size="md">
+                ← Volver a {sport === "soccer" ? "Fútbol" : sport}
+              </LinkButton>
+            </Row>
           </CardBody>
         </Card>
       </Stack>
