@@ -111,27 +111,32 @@ async function main() {
     scheduledMatch.id,
     "mock",
   );
-  console.log(
-    `pred: ${pred.predictedHomeScore}-${pred.predictedAwayScore} probs=${pred.homeWinProbability}/${pred.drawProbability}/${pred.awayWinProbability} expLen=${pred.explanation.length}`,
-  );
   check("4.6d predict matchId", pred.matchId === scheduledMatch.id, `got ${pred.matchId}`);
-  check(
-    "4.6e probabilidades suman 100 (±2 por redondeo)",
-    Math.abs(
-      pred.homeWinProbability + pred.drawProbability + pred.awayWinProbability - 100,
-    ) <= 2,
-    `suma=${pred.homeWinProbability + pred.drawProbability + pred.awayWinProbability}`,
-  );
-  check(
-    "4.6f probabilidades clamp (0-100)",
-    pred.homeWinProbability >= 0 &&
-      pred.homeWinProbability <= 100 &&
-      pred.drawProbability >= 0 &&
-      pred.drawProbability <= 100 &&
-      pred.awayWinProbability >= 0 &&
-      pred.awayWinProbability <= 100,
-  );
-  check("4.6g explanation no vacía", pred.explanation.length > 0);
+  if (pred.canonical) {
+    console.log(
+      `pred: ${pred.predictedHomeScore}-${pred.predictedAwayScore} probs=${pred.homeWinProbability}/${pred.drawProbability}/${pred.awayWinProbability} expLen=${pred.explanation.length}`,
+    );
+    check(
+      "4.6e probabilidades suman 100 (±2 por redondeo)",
+      Math.abs(
+        pred.homeWinProbability + pred.drawProbability + pred.awayWinProbability - 100,
+      ) <= 2,
+      `suma=${pred.homeWinProbability + pred.drawProbability + pred.awayWinProbability}`,
+    );
+    check(
+      "4.6f probabilidades clamp (0-100)",
+      pred.homeWinProbability >= 0 &&
+        pred.homeWinProbability <= 100 &&
+        pred.drawProbability >= 0 &&
+        pred.drawProbability <= 100 &&
+        pred.awayWinProbability >= 0 &&
+        pred.awayWinProbability <= 100,
+    );
+    check("4.6g explanation no vacía", pred.explanation.length > 0);
+  } else {
+    console.log(`pred: canonical=false reason=${pred.reason} (no canonical prediction for offline match)`);
+    check("4.6e no-cánónica → reason not_available", pred.reason === "not_available");
+  }
 
   // ====== 4.6c generatePlayerReport ======
   console.log("\n--- 4.6c generatePlayerReport ---");

@@ -27,6 +27,9 @@ import { getPlayersByIds, getPlayerById } from "@/lib/db/repositories/players-re
 import {
   getStatsByMatchId,
 } from "@/lib/db/repositories/player-stats-repo";
+import { getCanonicalPredictionRow } from "@/lib/db/repositories/predictions-repo";
+import { DEFAULT_MARKET_ID, DEFAULT_MODEL_VERSION_ID } from "@/lib/ai/prediction-service";
+import { assertValidModelProbs } from "@/lib/ai/evaluation-service";
 import {
   getTeamStandings,
   getPlayerSeasonRanking,
@@ -42,6 +45,54 @@ function hashCacheKey(parts: (string | number | boolean | undefined)[]): string 
     })
     .filter(Boolean)
     .join("|");
+}
+
+/**
+ * Busca la predicción canónica persistida para un match.
+ * Filtra explícitamente por market_id + model_version_id.
+ * Valida probabilidades y xG antes de retornar.
+ * Retorna null si no existe o si los datos son inválidos.
+ */
+async function getCanonicalPredictionForMatch(
+  matchId: string,
+): Promise<{
+  probabilities: { home: number; draw: number; away: number };
+  expectedGoals: { home: number; away: number } | null;
+  modelVersion: string;
+} | null> {
+  const row = await getCanonicalPredictionRow(matchId, DEFAULT_MARKET_ID, DEFAULT_MODEL_VERSION_ID);
+  if (!row) return null;
+
+  // Validate probabilities using centralized validation.
+  try {
+    assertValidModelProbs(row.model_probabilities);
+  } catch {
+    console.warn(`[ai-service] canonical prediction for ${matchId} has invalid probabilities — returning null.`);
+    return null;
+  }
+  const probs = row.model_probabilities as { home: number; draw: number; away: number };
+
+  // Validate expected goals if present.
+  const snapshot = row.data_snapshot as Record<string, unknown> | null;
+  const xgObj = snapshot?.expectedGoals as Record<string, unknown> | undefined;
+  let expectedGoals: { home: number; away: number } | null = null;
+  if (xgObj) {
+    const xgHome = typeof xgObj.home === "number" ? xgObj.home : null;
+    const xgAway = typeof xgObj.away === "number" ? xgObj.away : null;
+    if (
+      xgHome !== null && xgAway !== null &&
+      Number.isFinite(xgHome) && Number.isFinite(xgAway) &&
+      xgHome >= 0 && xgAway >= 0
+    ) {
+      expectedGoals = { home: xgHome, away: xgAway };
+    }
+  }
+
+  return {
+    probabilities: { home: probs.home, draw: probs.draw, away: probs.away },
+    expectedGoals,
+    modelVersion: row.model_version_id,
+  };
 }
 
 function safeJsonParse<T>(
@@ -321,12 +372,23 @@ export async function generateMatchAnalysis(
   });
 }
 
+export type CanonicalLookupFn = (matchId: string) => Promise<{
+  probabilities: { home: number; draw: number; away: number };
+  expectedGoals: { home: number; away: number } | null;
+  modelVersion: string;
+} | null>;
+
+export interface PredictMatchDeps {
+  lookupCanonical?: CanonicalLookupFn;
+}
+
 export async function predictMatch(
   sportId: SportId,
   leagueId: string,
   seasonId: string,
   matchId: string,
   providerHint?: "mock" | "openai",
+  deps?: PredictMatchDeps,
 ): Promise<MatchPredictionResult> {
   const cacheKey = hashCacheKey([
     "ai",
@@ -338,153 +400,40 @@ export async function predictMatch(
     providerHint ?? "auto",
   ]);
   return runCachedAi(cacheKey, async () => {
-  const rawMatch = await getMatchById(matchId);
-  const standings = await getTeamStandings(sportId, leagueId, seasonId);
 
-  const match = rawMatch ?? {
-    id: matchId,
-    home_team_id: "",
-    away_team_id: "",
-    match_date: new Date().toISOString(),
-    status: "scheduled",
-  };
-
-  const [home, away] = await Promise.all([
-    getTeamById(match.home_team_id),
-    getTeamById(match.away_team_id),
-  ]);
-
-  const h2h: Array<{
-    date: string;
-    homeName: string;
-    awayName: string;
-    hs: number;
-    as: number;
-  }> = [];
-  const hForm: ("W" | "D" | "L")[] = [];
-  const aForm: ("W" | "D" | "L")[] = [];
-
-  if (home && away) {
-    const [hm, am] = await Promise.all([
-      getMatchesByTeamId(home.id),
-      getMatchesByTeamId(away.id),
-    ]);
-    const finished = [...hm, ...am]
-      .filter(
-        (m, idx, arr) =>
-          m.status === "finished" &&
-          arr.findIndex((x) => x.id === m.id) === idx,
-      )
-      .filter(
-        (m) =>
-          (m.home_team_id === home.id && m.away_team_id === away.id) ||
-          (m.home_team_id === away.id && m.away_team_id === home.id),
-      )
-      .sort((a, b) => (a.match_date < b.match_date ? 1 : -1))
-      .slice(0, 5);
-    const h2hTeamIds = [...new Set(
-      finished.flatMap((m) => [m.home_team_id, m.away_team_id])
-        .filter((tid) => tid !== home.id && tid !== away.id),
-    )];
-    const h2hTeams = h2hTeamIds.length > 0 ? await getTeamsByIds(h2hTeamIds) : [];
-    const h2hTeamMap = new Map(h2hTeams.map((t) => [t.id, t]));
-    for (const m of finished) {
-      h2h.push({
-        date: m.match_date,
-        homeName:
-          m.home_team_id === home.id
-            ? home.name
-            : h2hTeamMap.get(m.home_team_id)?.name ?? m.home_team_id,
-        awayName:
-          m.away_team_id === away.id
-            ? away.name
-            : h2hTeamMap.get(m.away_team_id)?.name ?? m.away_team_id,
-        hs: m.home_score ?? 0,
-        as: m.away_score ?? 0,
-      });
-    }
-    hForm.push(...recentFormOf(hm, home.id, 5));
-    aForm.push(...recentFormOf(am, away.id, 5));
+  // ------------------------------------------------------------------
+  // 1. Canonical prediction (persisted production model v1-dixon-coles-2026-01)
+  // ------------------------------------------------------------------
+  const lookup = deps?.lookupCanonical ?? getCanonicalPredictionForMatch;
+  const canonical = await lookup(matchId);
+  if (canonical) {
+    const hp = Math.round(canonical.probabilities.home * 100);
+    const dp = Math.round(canonical.probabilities.draw * 100);
+    const ap = 100 - hp - dp;
+    const xgHome = canonical.expectedGoals?.home ?? 0;
+    const xgAway = canonical.expectedGoals?.away ?? 0;
+    return {
+      matchId,
+      canonical: true,
+      predictedHomeScore: Math.round(xgHome),
+      predictedAwayScore: Math.round(xgAway),
+      homeWinProbability: hp,
+      drawProbability: dp,
+      awayWinProbability: Math.max(0, ap),
+      explanation: `Pronóstico del modelo ${canonical.modelVersion} (experimental).`,
+      expectedGoals: canonical.expectedGoals ?? undefined,
+      modelVersion: canonical.modelVersion,
+    };
   }
 
-  const h = home ?? ({ id: match.home_team_id, name: "Local", short_name: "L" } as Team);
-  const a = away ?? ({ id: match.away_team_id, name: "Visita", short_name: "V" } as Team);
-
-  const { system, user } = buildSoccerMatchPredictionPrompt({
-    match,
-    home: h,
-    away: a,
-    standings,
-    h2hLast5: h2h,
-    last5Home: hForm,
-    last5Away: aForm,
-  });
-
-  const text = await chatWithFallback(
-    providerHint,
-    "prediction",
-    [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    { temperature: 0.4, maxTokens: 800 },
-  );
-  const parsed = safeJsonParse<{
-    predictedHomeScore?: unknown;
-    predictedAwayScore?: unknown;
-    homeWinProbability?: unknown;
-    drawProbability?: unknown;
-    awayWinProbability?: unknown;
-    explanation?: unknown;
-  }>(text, {
-    predictedHomeScore: 1,
-    predictedAwayScore: 1,
-    homeWinProbability: 33,
-    drawProbability: 34,
-    awayWinProbability: 33,
-    explanation:
-      "Pronóstico genérico por defecto (parsing LLM no disponible).",
-  });
-
-  const toNum = (v: unknown, def: number) => {
-    const n = typeof v === "number" ? v : Number(v);
-    return Number.isFinite(n) ? n : def;
-  };
-  const clampProb = (x: number) => Math.max(0, Math.min(100, Math.round(x)));
-
-  let hwp = clampProb(toNum(parsed.homeWinProbability, 33));
-  let dp = clampProb(toNum(parsed.drawProbability, 34));
-  let awp = clampProb(toNum(parsed.awayWinProbability, 33));
-  const total = hwp + dp + awp;
-  if (total <= 0) {
-    hwp = 33;
-    dp = 34;
-    awp = 33;
-  } else if (total !== 100) {
-    // Normalizar a 100, distribuyendo diferencia en home para mantener enteros.
-    const factor = 100 / total;
-    hwp = clampProb(Math.round(hwp * factor));
-    dp = clampProb(Math.round(dp * factor));
-    awp = 100 - hwp - dp;
-    if (awp < 0) {
-      awp = 0;
-      dp = 100 - hwp;
-    }
-  }
-
-  const result: MatchPredictionResult = {
+  // ------------------------------------------------------------------
+  // 2. No canonical prediction → unavailable (NO fabricar 33/34/33)
+  // ------------------------------------------------------------------
+  return {
     matchId,
-    predictedHomeScore: Math.max(0, Math.round(toNum(parsed.predictedHomeScore, hwp > awp ? 2 : 1))),
-    predictedAwayScore: Math.max(0, Math.round(toNum(parsed.predictedAwayScore, awp > hwp ? 2 : 1))),
-    homeWinProbability: hwp,
-    drawProbability: dp,
-    awayWinProbability: awp,
-    explanation:
-      typeof parsed.explanation === "string" && parsed.explanation.length > 0
-        ? parsed.explanation
-        : "Pronóstico basado en forma reciente y H2H.",
+    canonical: false,
+    reason: "not_available",
   };
-  return result;
   });
 }
 

@@ -20,7 +20,6 @@ export default function MatchAiPanels({
   matchId,
   leagueId,
   seasonId,
-  predictionAvailable,
   homeShort,
   awayShort,
 }: {
@@ -28,7 +27,6 @@ export default function MatchAiPanels({
   matchId: string;
   leagueId: string;
   seasonId: string;
-  predictionAvailable: boolean;
   homeShort: string;
   awayShort: string;
 }) {
@@ -68,33 +66,35 @@ export default function MatchAiPanels({
           </CardSubtitle>
         </CardHeader>
         <CardBody>
-          {!predictionAvailable ? (
-            <div className="match-empty-state">
-              Datos insuficientes de forma y tabla para calcular una estimación
-              confiable.
-            </div>
-          ) : prediction ? (
-            <>
-              <MatchProbabilityBar
-                homeProb={prediction.homeWinProbability}
-                drawProb={prediction.drawProbability}
-                awayProb={prediction.awayWinProbability}
-                homeLabel={`${homeShort} · Local`}
-                awayLabel={`${awayShort} · Visita`}
-              />
-              <div className="match-prediction-score">
-                <span>Marcador estimado</span>
-                <strong>
-                  {prediction.predictedHomeScore} - {prediction.predictedAwayScore}
-                </strong>
+          {prediction ? (
+            prediction.canonical ? (
+              <>
+                <MatchProbabilityBar
+                  homeProb={prediction.homeWinProbability}
+                  drawProb={prediction.drawProbability}
+                  awayProb={prediction.awayWinProbability}
+                  homeLabel={`${homeShort} · Local`}
+                  awayLabel={`${awayShort} · Visita`}
+                />
+                {prediction.expectedGoals ? (
+                  <div className="match-prediction-score">
+                    <span>Goles esperados</span>
+                    <strong>
+                      {homeShort} {prediction.expectedGoals.home.toFixed(2)} · {awayShort} {prediction.expectedGoals.away.toFixed(2)}
+                    </strong>
+                  </div>
+                ) : null}
+                <p className="match-disclaimer">{prediction.explanation}</p>
+              </>
+            ) : (
+              <div className="match-empty-state">
+                Predicción del modelo todavía no disponible para este partido.
               </div>
-              <p className="match-disclaimer">{prediction.explanation}</p>
-            </>
+            )
           ) : (
             <div className="match-ai-cta">
               <p>
-                Generar una estimación experta con IA sobre el desarrollo del
-                partido.
+                Cargar la predicción del modelo para este partido.
               </p>
               <Button
                 onClick={handlePrediction}
@@ -102,8 +102,8 @@ export default function MatchAiPanels({
                 size="sm"
               >
                 {busy === "prediction"
-                  ? "Generando…"
-                  : "Generar predicción con IA"}
+                  ? "Cargando…"
+                  : "Cargar predicción del modelo"}
               </Button>
             </div>
           )}

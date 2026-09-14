@@ -29,15 +29,25 @@ export interface MatchAnalysisResult {
   narrative: string;
 }
 
-export interface MatchPredictionResult {
-  matchId: string;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-  homeWinProbability: number;
-  drawProbability: number;
-  awayWinProbability: number;
-  explanation: string;
-}
+export type MatchPredictionResult =
+  | {
+      matchId: string;
+      canonical: true;
+      predictedHomeScore: number;
+      predictedAwayScore: number;
+      homeWinProbability: number;
+      drawProbability: number;
+      awayWinProbability: number;
+      explanation: string;
+      expectedGoals?: { home: number; away: number };
+      modelVersion?: string;
+    }
+  | {
+      matchId: string;
+      canonical: false;
+      reason: "not_available" | "invalid_prediction";
+      explanation?: string;
+    };
 
 export interface PlayerInsightResult {
   playerId: string;

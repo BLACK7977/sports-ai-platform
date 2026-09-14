@@ -68,6 +68,29 @@ export async function listPredictionRowsByMatchIds(
   return result.data;
 }
 
+/**
+ * Busca la predicción canónica para un match específico:
+ * match_id + market_id (1x2) + model_version_id (v1-dixon-coles-2026-01).
+ * Retorna null si no existe. Determinista: filtra por los 3 campos antes de ordenar.
+ */
+export async function getCanonicalPredictionRow(
+  matchId: string,
+  marketId: string,
+  modelVersionId: string,
+): Promise<Prediction | null> {
+  const db = await ensureDbReady();
+  const result = await db
+    .from<Prediction>("predictions")
+    .eq("match_id", matchId)
+    .eq("market_id", marketId)
+    .eq("model_version_id", modelVersionId)
+    .order("predicted_at", "desc")
+    .limit(1)
+    .select();
+  throwIfReadError(result, "canonical-prediction");
+  return result.data?.[0] ?? null;
+}
+
 export async function listEvaluationRowsByPredictionIds(
   predictionIds: Array<string | number>,
 ): Promise<PredictionEvaluation[]> {

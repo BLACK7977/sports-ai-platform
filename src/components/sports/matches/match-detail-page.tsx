@@ -235,7 +235,6 @@ export default function MatchDetailPage({
                 matchId={match.id}
                 leagueId={match.league_id}
                 seasonId={match.season_id}
-                predictionAvailable={predictionAvailable}
                 homeShort={home.short_name}
                 awayShort={away.short_name}
               />
