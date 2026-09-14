@@ -52,3 +52,15 @@ export function parseEntityId(value: string): string | null {
   const result = entityIdSchema.safeParse(value);
   return result.success ? result.data : null;
 }
+
+/**
+ * Safe URL-decode for route params. Calls decodeURIComponent exactly once.
+ * Returns null on URIError (malformed encoding) — never throws.
+ */
+export function safeDecodeEntityId(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}

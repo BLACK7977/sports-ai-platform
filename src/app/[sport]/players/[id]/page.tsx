@@ -13,15 +13,16 @@ import {
   getPlayerCareerStats,
   getPlayerSeasonRanking,
 } from "@/lib/services/statistics-service";
-import { parseSportId, parseEntityId } from "@/lib/config/validation";
+import { parseSportId, parseEntityId, safeDecodeEntityId } from "@/lib/config/validation";
 
 export default async function PlayerDetailRoute({
   params,
 }: {
   params: Promise<{ sport: string; id: string }>;
 }) {
-  const { sport, id } = await params;
-  if (!parseSportId(sport) || !parseEntityId(id)) notFound();
+  const { sport, id: rawId } = await params;
+  const id = safeDecodeEntityId(rawId);
+  if (!id || !parseSportId(sport) || !parseEntityId(id)) notFound();
   const has = getHasSport(sport);
   if (!has) notFound();
   await ensureDbReady();
