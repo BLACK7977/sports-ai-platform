@@ -97,8 +97,8 @@ export interface Match {
   away_team_id: string;
   match_date: string;
   status: MatchStatus;
-  home_score?: number;
-  away_score?: number;
+  home_score?: number | null;
+  away_score?: number | null;
   external_id?: string;
   provider?: string;
   last_synced_at?: string;

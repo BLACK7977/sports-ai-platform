@@ -121,6 +121,13 @@ export class SportmonksClient {
     });
   }
 
+  /** Single fixture by Sportmonks ID. Used by targeted score refresh. */
+  getFixtureById(fixtureId: number): Promise<SportmonksFixture> {
+    return this.get<SportmonksFixture>(`/fixtures/${fixtureId}`, {
+      include: "participants;scores;state",
+    });
+  }
+
   /** Sportmonks rejects season-wide ranges; this keeps every request inside one calendar month. */
   async getFixturesByMonthlyWindows(leagueId: number, from: string, to: string): Promise<Array<{ from: string; to: string; fixtures: SportmonksFixture[] }>> {
     const end = toUtcDate(to);

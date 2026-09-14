@@ -219,8 +219,8 @@ export interface HistoryScope {
 export interface BatchMatch {
   id: string;
   status: string;
-  home_score?: number;
-  away_score?: number;
+  home_score?: number | null;
+  away_score?: number | null;
   match_date: string;
   home_team_id: string;
   away_team_id: string;

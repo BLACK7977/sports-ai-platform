@@ -3,6 +3,7 @@ import type { SoccerMatchPayload } from "../types";
 import { normalizeArgentinaPrimeraFixture, normalizeArgentinaPrimeraSquad, type ArgentinaPrimeraExternalFixture, type ExternalPlayer, type ExternalTeam } from "./argentina-primera-adapter";
 import { SportmonksClient, type SportmonksFixture, type SportmonksSquadEntry, type SportmonksTeam } from "./sportmonks-client";
 import type { SoccerCompetitionTarget } from "./provider-contract";
+import { mapSportmonksState, extractCurrentScores } from "./sportmonks-normalize";
 
 const PROVIDER = "sportmonks";
 
@@ -47,17 +48,6 @@ function player(raw: SportmonksSquadEntry): ExternalPlayer {
   };
 }
 
-function status(raw: unknown): SoccerMatchPayload["status"] {
-  const value = typeof raw === "object" && raw !== null ? (raw as { short_name?: unknown; name?: unknown }).short_name ?? (raw as { name?: unknown }).name : raw;
-  const code = requiredString(value, "fixture.state").toUpperCase();
-  if (["NS", "TBD", "SCHEDULED"].includes(code)) return "scheduled";
-  if (["FT", "AET", "PEN", "FINISHED"].includes(code)) return "finished";
-  if (["1H", "HT", "2H", "ET", "BT", "LIVE", "INPLAY"].includes(code)) return "in_progress";
-  if (["PST", "POSTPONED"].includes(code)) return "postponed";
-  if (["CANC", "CANCL", "CANCELLED"].includes(code)) return "cancelled";
-  throw new Error(`[sportmonks] estado de fixture no soportado: ${code}.`);
-}
-
 function fixture(raw: SportmonksFixture): ArgentinaPrimeraExternalFixture {
   const participants = raw.participants;
   if (!Array.isArray(participants)) throw new Error("[sportmonks] fixture sin participants.");
@@ -69,20 +59,15 @@ function fixture(raw: SportmonksFixture): ArgentinaPrimeraExternalFixture {
     if (!item) throw new Error(`[sportmonks] fixture sin participante ${location}.`);
     return team(item);
   };
-  const state = raw.state;
   const result: ArgentinaPrimeraExternalFixture = {
     id: requiredNumber(raw.id, "fixture.id"), kickoff: requiredString(raw.starting_at, "fixture.starting_at"),
-    status: status(state), home: asTeam("home"), away: asTeam("away"),
+    status: mapSportmonksState(raw.state), home: asTeam("home"), away: asTeam("away"),
     round: typeof raw.round_id === "number" ? raw.round_id : undefined,
   };
   if (result.status === "finished") {
-    const scores = raw.scores;
-    if (!Array.isArray(scores)) throw new Error("[sportmonks] fixture finalizado sin scores.");
-    const current = scores.filter((score) => (score as { description?: unknown }).description === "CURRENT");
-    const homeScore = current.find((score) => (score as { score?: { participant?: unknown } }).score?.participant === "home") as { score?: { goals?: unknown } } | undefined;
-    const awayScore = current.find((score) => (score as { score?: { participant?: unknown } }).score?.participant === "away") as { score?: { goals?: unknown } } | undefined;
-    result.homeScore = requiredNumber(homeScore?.score?.goals, "fixture.homeScore");
-    result.awayScore = requiredNumber(awayScore?.score?.goals, "fixture.awayScore");
+    const { homeScore, awayScore } = extractCurrentScores(raw.scores);
+    result.homeScore = requiredNumber(homeScore, "fixture.homeScore");
+    result.awayScore = requiredNumber(awayScore, "fixture.awayScore");
   }
   return result;
 }

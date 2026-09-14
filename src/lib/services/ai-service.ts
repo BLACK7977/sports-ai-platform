@@ -177,8 +177,8 @@ function recentFormOf(
     status: string;
     home_team_id: string;
     away_team_id: string;
-    home_score?: number;
-    away_score?: number;
+    home_score?: number | null;
+    away_score?: number | null;
   }[],
   teamId: string,
   n = 5,

@@ -81,8 +81,8 @@ export type SoccerMatchPayload = {
   away_team_id: string;
   match_date: string;
   status: "scheduled" | "in_progress" | "finished" | "postponed" | "cancelled";
-  home_score?: number;
-  away_score?: number;
+  home_score?: number | null;
+  away_score?: number | null;
   specific?: SoccerMatchSpecific;
   playerStats?: Array<{
     player_id: string;
