@@ -9,6 +9,7 @@ import { getStatsByMatchId } from "@/lib/db/repositories/player-stats-repo";
 import { getPlayersByIds } from "@/lib/db/repositories/players-repo";
 import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statistics-service";
 import { parseSportId, parseEntityId, safeDecodeEntityId } from "@/lib/config/validation";
+import { getEnrichment, type MatchEnrichment } from "@/lib/services/match-enrichment-service";
 
 export default async function MatchDetailRoute({
   params,
@@ -38,12 +39,13 @@ export default async function MatchDetailRoute({
   // El análisis y la predicción AI se generan SOLO on-demand desde
   // componentes client (botones), nunca en el SSR de esta página:
   // así no se consumen tokens de OpenAI por cada request/render.
-  const [matchStats, standings, allSeasonMatches, squadRanking] =
+  const [matchStats, standings, allSeasonMatches, squadRanking, enrichment] =
     await Promise.all([
       getStatsByMatchId(id),
       getTeamStandings(sport, leagueId, seasonId),
       getMatchesByLeagueSeason(leagueId, seasonId),
       getPlayerSeasonRanking(sport, leagueId, seasonId),
+      getEnrichment(id),
     ]);
 
   const allPlayerIds = [...new Set([...matchStats.map((s) => s.player_id), ...squadRanking.map((player) => player.playerId)])];
@@ -64,6 +66,7 @@ export default async function MatchDetailRoute({
       allSeasonMatches={allSeasonMatches}
       squadRanking={squadRanking}
       playerMap={playerMap}
+      enrichment={enrichment}
     />
   );
 }

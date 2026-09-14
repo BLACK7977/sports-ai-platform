@@ -161,3 +161,94 @@ export interface PredictionEvaluation {
   evaluator: string;
   evaluation_version: number;
 }
+
+// ============================================================================
+// Match Enrichment (migration 008)
+// ============================================================================
+
+export interface MatchMetadata {
+  match_id: string;
+  venue_provider_id?: string | null;
+  venue_name?: string | null;
+  venue_city?: string | null;
+  venue_capacity?: number | null;
+  venue_address?: string | null;
+  venue_latitude?: number | null;
+  venue_longitude?: number | null;
+  venue_surface?: string | null;
+  round_provider_id?: string | null;
+  round_name?: string | null;
+  main_referee_provider_id?: string | null;
+  main_referee_name?: string | null;
+  home_formation?: string | null;
+  away_formation?: string | null;
+  provider?: string | null;
+  provider_fixture_id?: string | null;
+  last_synced_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export type MatchMetadataInsert = Partial<Pick<MatchMetadata, "created_at" | "updated_at">> &
+  Omit<MatchMetadata, "created_at" | "updated_at">;
+
+export interface MatchStatistic {
+  id: string;
+  match_id: string;
+  team_id?: string | null;
+  provider_participant_id?: string | null;
+  provider_stat_type_id?: string | null;
+  stat_name?: string | null;
+  stat_value?: number | null;
+  stat_value_json?: Jsonb | null;
+  location?: string | null;
+  provider: string;
+  sport_specific: Jsonb;
+  created_at: string;
+  updated_at: string;
+}
+export type MatchStatisticInsert = Partial<Pick<MatchStatistic, "id" | "created_at" | "updated_at">> &
+  Omit<MatchStatistic, "id" | "created_at" | "updated_at">;
+
+export interface MatchEvent {
+  id: string;
+  match_id: string;
+  team_id?: string | null;
+  player_id?: string | null;
+  assist_player_id?: string | null;
+  provider_player_id?: string | null;
+  provider_team_id?: string | null;
+  provider_event_id?: string | null;
+  provider_event_type_id?: string | null;
+  event_type?: string | null;
+  minute?: number | null;
+  extra_minute?: number | null;
+  result?: string | null;
+  event_detail?: string | null;
+  provider: string;
+  sport_specific: Jsonb;
+  created_at: string;
+  updated_at: string;
+}
+export type MatchEventInsert = Partial<Pick<MatchEvent, "id" | "created_at" | "updated_at">> &
+  Omit<MatchEvent, "id" | "created_at" | "updated_at">;
+
+export interface MatchLineup {
+  id: string;
+  match_id: string;
+  team_id?: string | null;
+  player_id?: string | null;
+  provider_player_id?: string | null;
+  provider_team_id?: string | null;
+  is_starter?: boolean | null;
+  position_id?: string | null;
+  position_name?: string | null;
+  jersey_number?: number | null;
+  formation_position?: number | null;
+  formation_field?: string | null;
+  provider: string;
+  sport_specific: Jsonb;
+  created_at: string;
+  updated_at: string;
+}
+export type MatchLineupInsert = Partial<Pick<MatchLineup, "id" | "created_at" | "updated_at">> &
+  Omit<MatchLineup, "id" | "created_at" | "updated_at">;

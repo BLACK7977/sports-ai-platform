@@ -1,17 +1,9 @@
 import "server-only";
 import type { SportId } from "@/types/core/sport";
-import type {
-  SportInsert,
-  LeagueInsert,
-  SeasonInsert,
-  TeamInsert,
-  PlayerInsert,
-  MatchInsert,
-  PlayerMatchStatsInsert,
-} from "@/types/db/tables";
 import {
   InMemoryStore,
   type TableName,
+  type Tables,
 } from "@/lib/db/in-memory-store";
 import {
   hasSupabase,
@@ -23,14 +15,10 @@ import {
   type QueryBuilder,
 } from "@/lib/db/supabase-wrapper";
 
-type AnyInsert =
-  | SportInsert
-  | LeagueInsert
-  | SeasonInsert
-  | TeamInsert
-  | PlayerInsert
-  | MatchInsert
-  | PlayerMatchStatsInsert;
+export type { DbClient };
+
+// Re-export the InsertShape type for use in the offline client
+type InsertShape<TN extends TableName> = import("@/lib/db/supabase-wrapper").InsertShape<TN>;
 
 let cachedClient: DbClient | null = null;
 let didLog = false;
@@ -54,23 +42,23 @@ function buildStoreOfflineClient(): DbClient {
       );
       return { data: res.data ?? null, error: res.error };
     },
-    upsert: async (table, row, uniqueKey) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    upsert: async <TN extends TableName>(table: TN, row: InsertShape<TN>, uniqueKey?: keyof Tables[TN]) => {
       const res = store.upsert(
         table,
-        row as unknown as Parameters<typeof store.upsert>[1],
-        uniqueKey as unknown as Parameters<typeof store.upsert>[2],
+        row as any,
+        uniqueKey as any,
       );
       return { data: res.data ?? null, error: res.error };
     },
-    bulkUpsert: async (table, items, uniqueKey) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    bulkUpsert: async <TN extends TableName>(table: TN, items: InsertShape<TN>[], uniqueKey?: keyof Tables[TN]) => {
       const res = store.bulkUpsert(
         table,
-        items as unknown as Parameters<typeof store.bulkUpsert>[1],
-        uniqueKey as unknown as Parameters<typeof store.bulkUpsert>[2],
+        items as any,
+        uniqueKey as any,
       );
-      return { data: res.data as unknown as AnyInsert[], error: res.error } as unknown as ReturnType<
-        DbClient["bulkUpsert"]
-      >;
+      return { data: (res.data ?? []) as Tables[TN][], error: res.error };
     },
     count: async (table) => store.count(table),
   };

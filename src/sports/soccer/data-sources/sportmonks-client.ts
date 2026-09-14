@@ -128,6 +128,13 @@ export class SportmonksClient {
     });
   }
 
+  /** Single fixture with full enrichment includes for match detail. */
+  getFixtureDetail(fixtureId: number): Promise<SportmonksFixture> {
+    return this.get<SportmonksFixture>(`/fixtures/${fixtureId}`, {
+      include: "venue;referees;round;statistics.type;events.type;lineups.player;formations;participants;scores;state",
+    });
+  }
+
   /** Sportmonks rejects season-wide ranges; this keeps every request inside one calendar month. */
   async getFixturesByMonthlyWindows(leagueId: number, from: string, to: string): Promise<Array<{ from: string; to: string; fixtures: SportmonksFixture[] }>> {
     const end = toUtcDate(to);

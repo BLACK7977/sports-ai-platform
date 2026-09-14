@@ -8,6 +8,10 @@ import type {
   PlayerMatchStats,
   Prediction,
   PredictionEvaluation,
+  MatchMetadata,
+  MatchStatistic,
+  MatchEvent,
+  MatchLineup,
   SportInsert,
   LeagueInsert,
   SeasonInsert,
@@ -15,6 +19,10 @@ import type {
   PlayerInsert,
   MatchInsert,
   PlayerMatchStatsInsert,
+  MatchMetadataInsert,
+  MatchStatisticInsert,
+  MatchEventInsert,
+  MatchLineupInsert,
   MatchStatus,
 } from "@/types/db/tables";
 
@@ -28,6 +36,10 @@ type Tables = {
   player_match_stats: PlayerMatchStats;
   predictions: Prediction;
   prediction_evaluations: PredictionEvaluation;
+  match_metadata: MatchMetadata;
+  match_statistics: MatchStatistic;
+  match_events: MatchEvent;
+  match_lineups: MatchLineup;
 };
 
 export type TableName = keyof Tables;
@@ -42,6 +54,10 @@ const TABLE_NAMES: TableName[] = [
   "player_match_stats",
   "predictions",
   "prediction_evaluations",
+  "match_metadata",
+  "match_statistics",
+  "match_events",
+  "match_lineups",
 ];
 
 type OrderDir = "asc" | "desc";
@@ -56,6 +72,7 @@ export interface QueryBuilder<T> {
   select(): Promise<{ data: T[]; error: null }>;
   maybeSingle(): Promise<{ data: T | null; error: null }>;
   single(): Promise<{ data: T; error: Error | null }>;
+  delete(): Promise<{ error: null }>;
 }
 
 interface InsertResult<T> {
@@ -74,6 +91,10 @@ class InMemoryStoreImpl {
     player_match_stats: new Map(),
     predictions: new Map(),
     prediction_evaluations: new Map(),
+    match_metadata: new Map(),
+    match_statistics: new Map(),
+    match_events: new Map(),
+    match_lineups: new Map(),
   };
   private initialized = false;
 
@@ -152,6 +173,15 @@ class InMemoryStoreImpl {
         if (rows.length === 0) return { data: undefined as unknown as TRow, error: new Error("No rows") };
         return { data: rows[0], error: null };
       },
+      delete: async () => {
+        const toDelete = apply();
+        const map = this.getData(table);
+        for (const row of toDelete) {
+          const idVal = (row as unknown as Record<string, unknown>).id;
+          if (typeof idVal === "string") map.delete(idVal);
+        }
+        return { error: null };
+      },
     };
     return builder;
   }
@@ -210,9 +240,11 @@ class InMemoryStoreImpl {
     row: InsertShape<TN>,
     uniqueKey?: keyof Tables[TN],
   ): string {
-    if (row.id) return row.id as string;
-    if (uniqueKey && (row as unknown as Record<string, unknown>)[uniqueKey as string]) {
-      return String((row as unknown as Record<string, unknown>)[uniqueKey as string]);
+    const r = row as unknown as Record<string, unknown>;
+    if (r.id) return r.id as string;
+    if (table === "match_metadata" && r.match_id) return r.match_id as string;
+    if (uniqueKey && r[uniqueKey as string]) {
+      return String(r[uniqueKey as string]);
     }
     return `gen-${table}-${this.randomId()}`;
   }
@@ -483,7 +515,15 @@ type InsertShape<TN extends TableName> = TN extends "sports"
           ? PlayerInsert
           : TN extends "matches"
             ? MatchInsert
-            : PlayerMatchStatsInsert;
+            : TN extends "match_metadata"
+              ? MatchMetadataInsert
+              : TN extends "match_statistics"
+                ? MatchStatisticInsert
+                : TN extends "match_events"
+                  ? MatchEventInsert
+                  : TN extends "match_lineups"
+                    ? MatchLineupInsert
+                    : PlayerMatchStatsInsert;
 
 function mkMatch(
   id: string,
