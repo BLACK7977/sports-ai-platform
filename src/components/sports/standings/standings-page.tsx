@@ -19,24 +19,29 @@ import {
 } from "@/components/ui/table";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { StandingsBars, TeamFormStrip } from "@/components/charts/svg-charts";
+import { TeamCrest } from "@/components/sports/teams/team-crest";
 import type { SoccerStandingsRow } from "@/sports/soccer/types";
+import type { Team } from "@/types/db/tables";
 
 export default async function StandingsPage({
   sport,
   leagueName,
   seasonName,
   standings,
+  teams,
 }: {
   sport: string;
   leagueName: string;
   seasonName: string;
   standings: SoccerStandingsRow[];
+  teams: Team[];
 }) {
   const has = getHasSport(sport);
   const sportEmoji = has?.sport.emoji ?? "⚽";
   const sportName = has?.sport.displayName ?? "Deporte";
 
   const maxPts = Math.max(1, ...standings.map((s) => s.points));
+  const teamMap = new Map(teams.map((team) => [team.id, team]));
 
   return (
     <Container size="wide" className="product-page standings-page">
@@ -192,12 +197,15 @@ export default async function StandingsPage({
                         </span>
                       </Td>
                       <Td>
+                        <div className="flex items-center gap-2">
+                          <TeamCrest name={teamMap.get(s.teamId)?.name ?? s.teamName} shortName={teamMap.get(s.teamId)?.short_name ?? s.shortName} logoUrl={teamMap.get(s.teamId)?.logo_url} />
                         <Link
                           href={`/${sport}/leaderboard`}
                           className="font-medium hover:underline text-slate-800 dark:text-slate-100"
                         >
                           {s.teamName}
                         </Link>
+                        </div>
                       </Td>
                       <Td className="text-right tabular-nums">{s.played}</Td>
                       <Td className="text-right tabular-nums text-emerald-600 font-medium">

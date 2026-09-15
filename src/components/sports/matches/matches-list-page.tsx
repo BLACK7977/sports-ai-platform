@@ -10,6 +10,8 @@ import { getCompetitionSelectionState } from "@/lib/db/repositories/active-compe
 import { getMatchesByLeagueSeason, getMatchesByLeagueSeasonDateRange, getMatchesByLeagueSeasonStatuses } from "@/lib/db/repositories/matches-repo";
 import { getTeamsByIds } from "@/lib/db/repositories/teams-repo";
 import { ensureDbReady } from "@/lib/db/client";
+import { matchDetailHref } from "@/lib/navigation/match-detail-href";
+import { TeamCrest } from "@/components/sports/teams/team-crest";
 import type { Match, Team } from "@/types/db/tables";
 
 const views = ["week", "today", "upcoming", "finished", "all"] as const;
@@ -61,5 +63,33 @@ export default async function MatchesListPage({ sport, view: rawView, week: rawW
 }
 
 type MatchProps = { match: Match; sport: string; teams: Map<string, Team> };
-function MobileMatch({ match, sport, teams }: MatchProps) { const badge = formatBadgeForStatus(match.status); const date = new Date(match.match_date); const scored = match.status === "finished" || match.status === "in_progress"; return <Link href={`/${sport}/matches/${match.id}`} className="mobile-match-row"><div className="mobile-match-meta"><time>{date.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })} · {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><Badge tone={badge.tone}>{badge.label}</Badge></div><div className="mobile-match-scoreline"><strong>{teams.get(match.home_team_id)?.name ?? match.home_team_id}</strong><b>{scored ? `${match.home_score ?? 0} : ${match.away_score ?? 0}` : "VS"}</b><strong>{teams.get(match.away_team_id)?.name ?? match.away_team_id}</strong></div></Link>; }
-function DesktopMatch({ match, sport, teams }: MatchProps) { const badge = formatBadgeForStatus(match.status); const date = new Date(match.match_date); const scored = match.status === "finished" || match.status === "in_progress"; return <Tr hoverable><Td><div className="font-medium">{date.toLocaleDateString()}</div><div className="text-xs text-slate-400">{date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></Td><Td><Link href={`/${sport}/matches/${match.id}`} className="hover:underline">{teams.get(match.home_team_id)?.name ?? match.home_team_id}</Link></Td><Td align="center"><div className="inline-flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-1 font-bold tabular-nums dark:bg-slate-800"><span className={scored ? "" : "opacity-0"}>{match.home_score ?? 0}</span><span className="text-slate-400">{scored ? ":" : "vs"}</span><span className={scored ? "" : "opacity-0"}>{match.away_score ?? 0}</span></div></Td><Td><Link href={`/${sport}/matches/${match.id}`} className="hover:underline">{teams.get(match.away_team_id)?.name ?? match.away_team_id}</Link></Td><Td align="right"><Badge tone={badge.tone}>{badge.label}</Badge></Td></Tr>; }
+
+function MobileMatch({ match, sport, teams }: MatchProps) {
+  const badge = formatBadgeForStatus(match.status);
+  const date = new Date(match.match_date);
+  const scored = match.status === "finished" || match.status === "in_progress";
+  const home = teams.get(match.home_team_id);
+  const away = teams.get(match.away_team_id);
+  return <Link href={matchDetailHref(sport, match.id)} className="mobile-match-row focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300"><div className="mobile-match-meta"><time>{date.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })} · {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time><Badge tone={badge.tone}>{badge.label}</Badge></div><div className="mobile-match-scoreline"><span className="inline-flex min-w-0 items-center gap-2"><TeamCrest name={home?.name ?? "Equipo no disponible"} shortName={home?.short_name} logoUrl={home?.logo_url} /><strong>{home?.name ?? "Equipo no disponible"}</strong></span><b>{scored ? `${match.home_score ?? 0} : ${match.away_score ?? 0}` : "VS"}</b><span className="inline-flex min-w-0 items-center justify-end gap-2"><strong>{away?.name ?? "Equipo no disponible"}</strong><TeamCrest name={away?.name ?? "Equipo no disponible"} shortName={away?.short_name} logoUrl={away?.logo_url} /></span></div></Link>;
+}
+
+function DesktopMatch({ match, sport, teams }: MatchProps) {
+  const badge = formatBadgeForStatus(match.status);
+  const date = new Date(match.match_date);
+  const scored = match.status === "finished" || match.status === "in_progress";
+  const home = teams.get(match.home_team_id);
+  const away = teams.get(match.away_team_id);
+  const homeName = home?.name ?? "Equipo no disponible";
+  const awayName = away?.name ?? "Equipo no disponible";
+  const destination = matchDetailHref(sport, match.id);
+  const linkClass = "-mx-4 -my-3 block px-4 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-cyan-300";
+  const accessibleLabel = `${homeName} contra ${awayName}. ${badge.label}. Abrir detalle del partido`;
+
+  return <Tr hoverable className="group focus-within:bg-cyan-300/10">
+    <Td><Link href={destination} aria-label={accessibleLabel} className={linkClass}><div className="font-medium">{date.toLocaleDateString()}</div><div className="text-xs text-slate-400">{date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></Link></Td>
+    <Td><Link href={destination} tabIndex={-1} aria-hidden className={`${linkClass} inline-flex items-center gap-2`}><TeamCrest name={homeName} shortName={home?.short_name} logoUrl={home?.logo_url} />{homeName}</Link></Td>
+    <Td align="center"><Link href={destination} tabIndex={-1} aria-hidden className={linkClass}><div className="inline-flex items-center gap-3 rounded-lg bg-slate-100 px-3 py-1 font-bold tabular-nums dark:bg-slate-800"><span className={scored ? "" : "opacity-0"}>{match.home_score ?? 0}</span><span className="text-slate-400">{scored ? ":" : "vs"}</span><span className={scored ? "" : "opacity-0"}>{match.away_score ?? 0}</span></div></Link></Td>
+    <Td><Link href={destination} tabIndex={-1} aria-hidden className={`${linkClass} inline-flex items-center gap-2`}><TeamCrest name={awayName} shortName={away?.short_name} logoUrl={away?.logo_url} />{awayName}</Link></Td>
+    <Td align="right"><Link href={destination} tabIndex={-1} aria-hidden className={linkClass}><span className="inline-flex items-center gap-2"><Badge tone={badge.tone}>{badge.label}</Badge><span aria-hidden className="text-cyan-300/70">→</span></span></Link></Td>
+  </Tr>;
+}

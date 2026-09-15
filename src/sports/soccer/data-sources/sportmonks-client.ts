@@ -131,7 +131,7 @@ export class SportmonksClient {
   /** Single fixture with full enrichment includes for match detail. */
   getFixtureDetail(fixtureId: number): Promise<SportmonksFixture> {
     return this.get<SportmonksFixture>(`/fixtures/${fixtureId}`, {
-      include: "venue;referees;round;statistics.type;events.type;lineups.player;formations;participants;scores;state",
+      include: "venue;referees;round;statistics.type;events.type;lineups.player;lineups.position;lineups.detailedposition;formations.participant;participants;scores;state",
     });
   }
 

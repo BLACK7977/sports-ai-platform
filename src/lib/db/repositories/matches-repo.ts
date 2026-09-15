@@ -59,6 +59,36 @@ export async function getMatchesByLeagueSeason(
   return data;
 }
 
+/** Stable, collision-free key for a persisted league/season pair. */
+export function leagueSeasonKey(leagueId: string, seasonId: string): string {
+  return JSON.stringify([leagueId, seasonId]);
+}
+
+export async function getMatchesByLeagueSeasons(
+  pairs: Array<{ leagueId: string; seasonId: string }>,
+): Promise<Map<string, Match[]>> {
+  if (pairs.length === 0) return new Map();
+  const db = await ensureDbReady();
+  // Build OR filter for multiple (league_id, season_id) pairs
+  // Supabase doesn't support direct tuple IN, so we use OR with multiple conditions
+  const orFilters = pairs.map(
+    (p) => `and(league_id.eq.${p.leagueId},season_id.eq.${p.seasonId})`
+  );
+  const { data } = await db
+    .from<Match>("matches")
+    .or(orFilters.join(","))
+    .order("match_date", "desc")
+    .select();
+  const byPair = new Map<string, Match[]>();
+  for (const m of data) {
+    const key = leagueSeasonKey(m.league_id, m.season_id);
+    const arr = byPair.get(key) ?? [];
+    arr.push(m);
+    byPair.set(key, arr);
+  }
+  return byPair;
+}
+
 /** Date-bounded match read used by the Match Center's time views. */
 export async function getMatchesByLeagueSeasonDateRange(
   leagueId: string,

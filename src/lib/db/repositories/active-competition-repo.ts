@@ -1,13 +1,20 @@
 import "@/lib/config/env";
 import { cookies } from "next/headers";
 import { getLeaguesBySportId } from "./leagues-repo";
+import { getMatchesByLeagueSeason, getMatchesByLeagueSeasons, leagueSeasonKey } from "./matches-repo";
 import { getSeasonsByLeagueId, getSeasonsByLeagueIds } from "./seasons-repo";
+import { getTeamsByLeagueId, getTeamsByLeagueIds } from "./teams-repo";
 import type { League, Season } from "@/types/db/tables";
 
 export type ActiveCompetition = { league: League; season: Season };
 export type CompetitionCandidate = { league: League; seasons: Season[] };
 export const competitionSelectionCookie = (sportId: string) =>
   `sports-ai-competition-${sportId}`;
+
+/** Cookie-safe without colliding with namespaced entity IDs containing colons. */
+export function serializeCompetitionSelection(leagueId: string, seasonId: string): string {
+  return `${encodeURIComponent(leagueId)}|${encodeURIComponent(seasonId)}`;
+}
 
 function pickSeason(seasons: Season[]): Season | null {
   return seasons.find((season) => season.is_current) ?? seasons[0] ?? null;
@@ -57,7 +64,7 @@ export async function getActiveCompetitionForLeague(
 }
 
 export async function getActiveCompetition(sportId: string): Promise<ActiveCompetition | null> {
-  return selectActiveCompetition(await getCompetitionCandidates(sportId));
+  return selectActiveCompetition(await getUsableCompetitionCandidates(sportId));
 }
 
 export async function getCompetitionCandidates(
@@ -77,11 +84,83 @@ export async function getCompetitionCandidates(
   }));
 }
 
+/**
+ * A selectable season needs enough persisted data to drive the competition
+ * screens. This is read-only and never changes active flags or source data.
+ */
+export async function getUsableCompetitionCandidates(
+  sportId: string,
+): Promise<CompetitionCandidate[]> {
+  const candidates = await getCompetitionCandidates(sportId);
+  if (candidates.length === 0) return [];
+
+  // Batch: get teams for all leagues in one query
+  const leagueIds = candidates.map((c) => c.league.id);
+  const teamsByLeague = await getTeamsByLeagueIds(leagueIds);
+
+  // Collect all (league, season) pairs that have teams
+  const pairs: Array<{ leagueId: string; seasonId: string; candidateIdx: number; seasonIdx: number }> = [];
+  for (let ci = 0; ci < candidates.length; ci++) {
+    const candidate = candidates[ci];
+    const teams = teamsByLeague.get(candidate.league.id) ?? [];
+    if (teams.length === 0) continue;
+    for (let si = 0; si < candidate.seasons.length; si++) {
+      pairs.push({
+        leagueId: candidate.league.id,
+        seasonId: candidate.seasons[si].id,
+        candidateIdx: ci,
+        seasonIdx: si,
+      });
+    }
+  }
+
+  // Batch: get matches for all (league, season) pairs in one query
+  const matchesByPair = await getMatchesByLeagueSeasons(pairs);
+
+  // Build result mapping
+  const candidateHasTeams = new Set(teamsByLeague.keys());
+  const candidateSeasonHasMatches = new Map<number, Set<number>>(); // candidateIdx -> Set<seasonIdx>
+  for (const pair of pairs) {
+    const key = leagueSeasonKey(pair.leagueId, pair.seasonId);
+    const matches = matchesByPair.get(key) ?? [];
+    if (matches.length > 0) {
+      const set = candidateSeasonHasMatches.get(pair.candidateIdx) ?? new Set();
+      set.add(pair.seasonIdx);
+      candidateSeasonHasMatches.set(pair.candidateIdx, set);
+    }
+  }
+
+  // Build final candidates
+  const usable: CompetitionCandidate[] = [];
+  for (let ci = 0; ci < candidates.length; ci++) {
+    const candidate = candidates[ci];
+    if (!candidateHasTeams.has(candidate.league.id)) continue;
+    const validSeasonIdxs = candidateSeasonHasMatches.get(ci);
+    if (!validSeasonIdxs || validSeasonIdxs.size === 0) continue;
+    const validSeasons = candidate.seasons.filter((_, si) => validSeasonIdxs.has(si));
+    usable.push({ ...candidate, seasons: validSeasons });
+  }
+  return usable;
+}
+
 function readSelection(value: string | undefined): {
   leagueId: string;
   seasonId: string;
 } | null {
   if (!value) return null;
+  const encoded = value.split("|");
+  if (encoded.length === 2 && encoded[0] && encoded[1]) {
+    try {
+      return {
+        leagueId: decodeURIComponent(encoded[0]),
+        seasonId: decodeURIComponent(encoded[1]),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  // Preserve existing simple-ID cookies created before namespaced provider IDs.
   const [leagueId, seasonId, ...rest] = value.split(":");
   return leagueId && seasonId && rest.length === 0 ? { leagueId, seasonId } : null;
 }
@@ -95,7 +174,7 @@ export async function getCompetitionSelectionState(sportId: string): Promise<{
   active: ActiveCompetition | null;
   candidates: CompetitionCandidate[];
 }> {
-  const candidates = await getCompetitionCandidates(sportId);
+  const candidates = await getUsableCompetitionCandidates(sportId);
   const selected = readSelection(
     (await cookies()).get(competitionSelectionCookie(sportId))?.value,
   );
@@ -116,7 +195,7 @@ export async function isValidCompetitionSelection(
   leagueId: string,
   seasonId: string,
 ): Promise<boolean> {
-  const candidates = await getCompetitionCandidates(sportId);
+  const candidates = await getUsableCompetitionCandidates(sportId);
   return candidates.some(
     (candidate) =>
       candidate.league.id === leagueId &&

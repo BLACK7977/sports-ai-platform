@@ -369,6 +369,37 @@ async function testEventsUpdatedAt() {
 }
 
 // ---------------------------------------------------------------------------
+// Event context preservation — participant and related player (real fixture)
+// ---------------------------------------------------------------------------
+
+async function testEventContextPreservation() {
+  console.log("\nTEST: Event normalization — structured participant and related player preserved");
+
+  const { normalizeEvents } = await import("@/sports/soccer/data-sources/sportmonks-enrichment-normalizers");
+  const [goal, substitution] = normalizeEvents(MATCH_ID, [
+    {
+      id: "goal-1", minute: 11, participant_id: 86, player_id: 100,
+      player_name: "Goal scorer", related_player_id: 200,
+      related_player_name: "Goal assistant", type: { name: "Goal" },
+    },
+    {
+      id: "sub-1", minute: 63, participant_id: 20, player_id: 300,
+      player_name: "First player", related_player_id: 400,
+      related_player_name: "Second player", on_bench: true, type: { name: "Substitution" },
+    },
+  ], PROVIDER);
+
+  const goalContext = goal.sport_specific as Record<string, unknown>;
+  const subContext = substitution.sport_specific as Record<string, unknown>;
+  assertEqual(goal.provider_team_id, "86", "participant_id resolves to provider team ID");
+  assertEqual(goalContext.provider_player_name, "Goal scorer", "structured player name is preserved");
+  assertEqual(goalContext.related_player_provider_id, "200", "related provider player ID is preserved");
+  assertEqual(goalContext.related_player_name, "Goal assistant", "structured related player name is preserved");
+  assertEqual(subContext.related_player_name, "Second player", "substitution counterpart is preserved without role inference");
+  assertEqual(subContext.player_on_bench, true, "structured bench status is preserved for substitution roles");
+}
+
+// ---------------------------------------------------------------------------
 // Normalizer strictness (from Phase 3.1, still valid)
 // ---------------------------------------------------------------------------
 
@@ -401,11 +432,53 @@ async function testNormalizerStrictness() {
   const meta = normalizeMetadata(MATCH_ID, { id: 1, venue: null, referees: [], round: null, formations: [] }, PROVIDER);
   assertEqual(meta.venue_name, null, "null venue → null name");
 
+  // Formations must be associated through the fixture participant identity,
+  // never through the provider response array order.
+  const reversedFormations = normalizeMetadata(MATCH_ID, {
+    id: 1,
+    venue: null,
+    referees: [],
+    round: null,
+    participants: [
+      { id: 86, meta: { location: "home" } },
+      { id: 2447, meta: { location: "away" } },
+    ],
+    formations: [
+      { participant_id: 2447, formation: "4-3-3" },
+      { participant_id: 86, formation: "3-4-2-1" },
+    ],
+  }, PROVIDER);
+  assertEqual(reversedFormations.home_formation, "3-4-2-1", "formación local se resuelve por participante aunque el array llegue invertido");
+  assertEqual(reversedFormations.away_formation, "4-3-3", "formación visitante se resuelve por participante aunque el array llegue invertido");
+
   // Lineups: is_starter null when structurally unavailable
   const lineups = normalizeLineups(MATCH_ID, [
     { id: "l1", player: { id: 1 }, team_id: 1 },
+    { id: "l2", player: { id: 2, display_name: "Nombre Real" }, team_id: 1, type_id: 11, position_id: 25, detailedposition_id: 7, detailedposition: { name: "Central" }, formation_position: 3, formation_field: "2:2", jersey_number: 4 },
+    { id: "l3", player: { id: 3 }, team_id: 1, type_id: 12 },
   ], PROVIDER);
   assertEqual(lineups[0].is_starter, null, "is_starter null when not structurally determinable");
+  assertEqual(lineups[1].is_starter, true, "verified type 11 → titular");
+  assertEqual(lineups[2].is_starter, false, "verified type 12 → suplente");
+  assertEqual(lineups[1].player_name, "Nombre Real", "nombre estructurado del jugador preservado");
+  assertEqual(lineups[1].detailed_position_id, "7", "posición detallada estructurada preservada");
+  assertEqual(lineups[1].formation_field, "2:2", "ubicación táctica estructurada preservada");
+
+  const otherProviderLineups = normalizeLineups(MATCH_ID, [
+    { id: "other-1", player: { id: 4 }, team_id: 1, type_id: 11 },
+    { id: "other-2", player: { id: 5 }, team_id: 1, type_id: 12 },
+  ], "another-provider");
+  assertEqual(otherProviderLineups[0].is_starter, null, "type 11 de otro proveedor no se clasifica");
+  assertEqual(otherProviderLineups[1].is_starter, null, "type 12 de otro proveedor no se clasifica");
+}
+
+async function testSpanishPositionPresentation() {
+  console.log("\nTEST: Presentación de posiciones en español");
+  const { presentSoccerPosition } = await import("@/lib/presentation/soccer");
+  assertEqual(presentSoccerPosition("Goalkeeper"), "Arquero", "Goalkeeper se presenta como Arquero");
+  assertEqual(presentSoccerPosition("Centre Back"), "Defensor central", "Centre Back se presenta como Defensor central");
+  assertEqual(presentSoccerPosition("Central Midfield"), "Mediocampista central", "Central Midfield se presenta en español");
+  assertEqual(presentSoccerPosition("Unknown provider term"), "Unknown provider term", "término desconocido no inventa una posición");
 }
 
 // ---------------------------------------------------------------------------
@@ -703,7 +776,9 @@ async function runAllTests() {
   await testEventTeamDisplay();
   await testTypeSafety();
   await testEventsUpdatedAt();
+  await testEventContextPreservation();
   await testNormalizerStrictness();
+  await testSpanishPositionPresentation();
   await testIdNamespacing();
 
   // Phase 3.3 tests

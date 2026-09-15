@@ -4,6 +4,7 @@ import { getHasSport, formatLeagueName, formatSeasonName } from "@/components/sp
 import { ensureDbReady } from "@/lib/db/client";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamStandings } from "@/lib/services/statistics-service";
+import { getTeamsByLeagueId } from "@/lib/db/repositories/teams-repo";
 import { parseSportId } from "@/lib/config/validation";
 
 export default async function StandingsRoute({
@@ -19,10 +20,12 @@ export default async function StandingsRoute({
   const { active } = await getCompetitionSelectionState(sport);
   const mainLeague = active?.league;
   const mainSeason = active?.season.id ?? "";
-  const standings =
+  const [standings, teams] = await Promise.all([
     mainLeague && mainSeason
       ? await getTeamStandings(sport, mainLeague.id, mainSeason)
-      : [];
+      : [],
+    mainLeague ? getTeamsByLeagueId(mainLeague.id) : Promise.resolve([]),
+  ]);
 
   return (
     <StandingsPage
@@ -33,6 +36,7 @@ export default async function StandingsRoute({
       })}
       seasonName={active?.season.name ?? formatSeasonName(mainSeason)}
       standings={standings}
+      teams={teams}
     />
   );
 }

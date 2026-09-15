@@ -127,8 +127,8 @@ export async function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer-signal mt-16 border-t border-cyan-100/10 bg-[#050d18]/80">
-      <Container size="wide" className="py-10 text-sm text-slate-500 dark:text-slate-400">
+    <footer className="site-footer-signal mt-0 border-t border-cyan-100/10 bg-[#050d18]/80">
+      <Container size="wide" className="pb-10 pt-16 text-sm text-slate-500 dark:text-slate-400">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <div>© {new Date().getFullYear()} Sports AI Platform — MVP</div>
           <div className="flex flex-wrap gap-4">
@@ -145,7 +145,7 @@ export function SiteFooter() {
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col bg-[#040b13]">
       <SiteHeader />
       <main className="sports-app-main flex-1 py-8">{children}</main>
       <SportsNavigation variant="mobile" />

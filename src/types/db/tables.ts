@@ -240,8 +240,12 @@ export interface MatchLineup {
   provider_player_id?: string | null;
   provider_team_id?: string | null;
   is_starter?: boolean | null;
+  /** Nombre recibido de la fuente para poder mostrar alineaciones sin inventarlo. */
+  player_name?: string | null;
   position_id?: string | null;
+  detailed_position_id?: string | null;
   position_name?: string | null;
+  provider_type_id?: string | null;
   jersey_number?: number | null;
   formation_position?: number | null;
   formation_field?: string | null;

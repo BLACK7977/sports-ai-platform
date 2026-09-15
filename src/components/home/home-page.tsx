@@ -17,6 +17,7 @@ import { countPlayers } from "@/lib/db/repositories/players-repo";
 import { getAllLeagues as getLeagues } from "@/lib/db/repositories/leagues-repo";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
 import { getTeamsByIds } from "@/lib/db/repositories/teams-repo";
+import { matchDetailHref } from "@/lib/navigation/match-detail-href";
 import { getActiveSports } from "@/lib/config/sports-registry";
 import { ensureDbReady } from "@/lib/db/client";
 
@@ -114,7 +115,7 @@ export default async function HomePage() {
                     const badge = formatBadgeForStatus(match.status);
                     const home = activeTeamMap.get(match.home_team_id) ?? match.home_team_id;
                     const away = activeTeamMap.get(match.away_team_id) ?? match.away_team_id;
-                    return <Link key={match.id} href={`/soccer/matches/${match.id}`} className="home-match-row">
+                    return <Link key={match.id} href={matchDetailHref("soccer", match.id)} className="home-match-row">
                       <span className="home-match-date">{new Date(match.match_date).toLocaleDateString()}</span>
                       <span className="home-match-team home-match-team-right">{home}</span>
                       <span className="home-match-score">{match.status === "finished" || match.status === "in_progress" ? `${match.home_score ?? 0} - ${match.away_score ?? 0}` : "vs"}</span>

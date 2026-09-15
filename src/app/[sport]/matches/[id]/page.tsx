@@ -3,7 +3,7 @@ import MatchDetailPage from "@/components/sports/matches/match-detail-page";
 import { ensureDbReady } from "@/lib/db/client";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { getMatchById, getMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";
-import { getTeamById } from "@/lib/db/repositories/teams-repo";
+import { getTeamById, getTeamsByIds } from "@/lib/db/repositories/teams-repo";
 import { getLeagueById } from "@/lib/db/repositories/leagues-repo";
 import { getStatsByMatchId } from "@/lib/db/repositories/player-stats-repo";
 import { getPlayersByIds } from "@/lib/db/repositories/players-repo";
@@ -48,8 +48,19 @@ export default async function MatchDetailRoute({
       getEnrichment(id),
     ]);
 
-  const allPlayerIds = [...new Set([...matchStats.map((s) => s.player_id), ...squadRanking.map((player) => player.playerId)])];
-  const players = await getPlayersByIds(allPlayerIds);
+  const allPlayerIds = [...new Set([
+    ...matchStats.map((stat) => stat.player_id),
+    ...squadRanking.map((player) => player.playerId),
+    ...enrichment.events.flatMap((event) => [event.player_id, event.assist_player_id]),
+    ...enrichment.lineups.map((lineup) => lineup.player_id),
+  ].filter((id): id is string => Boolean(id)))];
+  const allSeasonTeamIds = [...new Set(
+    allSeasonMatches.flatMap((seasonMatch) => [seasonMatch.home_team_id, seasonMatch.away_team_id]),
+  )];
+  const [players, seasonTeams] = await Promise.all([
+    getPlayersByIds(allPlayerIds),
+    getTeamsByIds(allSeasonTeamIds),
+  ]);
   const playerMap = new Map(
     players.map((p) => [p.id, p]),
   );
@@ -66,6 +77,7 @@ export default async function MatchDetailRoute({
       allSeasonMatches={allSeasonMatches}
       squadRanking={squadRanking}
       playerMap={playerMap}
+      seasonTeams={seasonTeams}
       enrichment={enrichment}
     />
   );

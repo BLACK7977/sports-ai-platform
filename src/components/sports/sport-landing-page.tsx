@@ -23,6 +23,7 @@ import {
 import { StandingsBars, TeamFormStrip } from "@/components/charts/svg-charts";
 import { ensureDbReady } from "@/lib/db/client";
 import { CompetitionSelector } from "@/components/sports/competition-selector";
+import { TeamCrest } from "@/components/sports/teams/team-crest";
 
 export default async function SportLandingPage({
   sport,
@@ -58,15 +59,16 @@ export default async function SportLandingPage({
 
   const finished = matches.filter((m) => m.status === "finished").length;
   const scheduled = matches.filter((m) => m.status === "scheduled").length;
+  const teamMap = new Map(teams.map((team) => [team.id, team]));
 
   return (
     <Container size="wide" className="cyber-page cyber-dashboard">
       <Stack gap="xl">
         <header className="dashboard-hero">
           <div className="dashboard-hero-copy">
-            <div className="dashboard-kicker"><i /> CENTRO DE RENDIMIENTO · {sportDef.emoji} {sportDef.displayName}</div>
-            <h1>{sportDef.displayName}<span> / Control de rendimiento</span></h1>
-            <p>Resultados, forma y producción de la competición organizados para leer cada señal con contexto.</p>
+            <div className="dashboard-kicker"><i /> COMPETICIÓN ACTIVA · {sportDef.emoji} {sportDef.displayName}</div>
+            <h1>{sportDef.displayName}<span> / Resumen de competición</span></h1>
+            <p>Resultados, tabla y planteles de la liga y temporada seleccionadas.</p>
             <div className="dashboard-signal-row">
               <span><b>{mainLeague?.name ?? "Competición"}</b><small>Liga activa</small></span>
               <span><b>{mainLeague?.country ?? "—"}</b><small>País / región</small></span>
@@ -76,7 +78,7 @@ export default async function SportLandingPage({
           <Row className="dashboard-actions flex-wrap">
             <CompetitionSelector sportId={sport} active={active} candidates={candidates} />
             <LinkButton href={`/${sport}/matches`} tone="primary" size="md">
-              Abrir Match Center →
+              Partidos →
             </LinkButton>
             <LinkButton href={`/${sport}/standings`} tone="outline" size="md">
               Tabla
@@ -90,48 +92,23 @@ export default async function SportLandingPage({
           </Row>
         </header>
 
-        <section className="dashboard-section-heading"><span>01 / COMPETITION PULSE</span><p>Resumen instantáneo de la actividad actual</p></section>
+        <section className="dashboard-section-heading"><span>01 / RESUMEN</span><p>Actividad de la competición seleccionada</p></section>
         <div className="dashboard-metrics">
-          <Card className="dashboard-metric dashboard-metric-cyan">
-            <CardBody>
-              <div className="text-xs text-slate-500">Partidos totales</div>
-              <div className="text-3xl font-bold">{matches.length}</div>
-              <Row className="mt-2">
-                <Badge tone="success">{finished} finalizados</Badge>
-                <Badge tone="info">{scheduled} programados</Badge>
-              </Row>
-            </CardBody>
-          </Card>
-          <Card className="dashboard-metric dashboard-metric-violet">
-            <CardBody>
-              <div className="text-xs text-slate-500">Competiciones disponibles</div>
-              <div className="text-3xl font-bold">{leagues.length}</div>
-              <div className="text-xs text-slate-500 mt-2 truncate">
-                En SPORTS AI
-              </div>
-            </CardBody>
-          </Card>
-          <Card className="dashboard-metric dashboard-metric-green">
-            <CardBody>
-              <div className="text-xs text-slate-500">Equipos de la competición</div>
-              <div className="text-3xl font-bold">{standings.length}</div>
-              <div className="text-xs text-emerald-600 mt-2">
-                Líder: {standings[0]?.teamName ?? "—"}
-              </div>
-            </CardBody>
-          </Card>
-          <Card className="dashboard-metric dashboard-metric-sky">
-            <CardBody>
-              <div className="text-xs text-slate-500">Jugadores en planteles</div>
-              <div className="text-3xl font-bold">{competitionPlayers.size}</div>
-              <div className="text-xs text-slate-500 mt-2">
-                Asociados a la competición activa
-              </div>
-            </CardBody>
-          </Card>
+          <Link href={`/${sport}/matches`} className="dashboard-metric-link" aria-label="Ver partidos de la competición">
+            <Card className="dashboard-metric dashboard-metric-cyan"><CardBody><div className="text-xs text-slate-500">Partidos de esta competición</div><div className="text-3xl font-bold">{matches.length}</div><Row className="mt-2"><Badge tone="success">{finished} finalizados</Badge><Badge tone="info">{scheduled} programados</Badge></Row></CardBody></Card>
+          </Link>
+          <Link href="#competition-selector" className="dashboard-metric-link" aria-label="Elegir competición y temporada">
+            <Card className="dashboard-metric dashboard-metric-violet"><CardBody><div className="text-xs text-slate-500">Competiciones con datos</div><div className="text-3xl font-bold">{candidates.length}</div><div className="mt-2 text-xs text-slate-500">{leagues.length} registradas en SPORTS AI · Elegir</div></CardBody></Card>
+          </Link>
+          <Link href={`/${sport}/players`} className="dashboard-metric-link" aria-label="Ver equipos y planteles de la competición">
+            <Card className="dashboard-metric dashboard-metric-green"><CardBody><div className="text-xs text-slate-500">Equipos de la competición</div><div className="text-3xl font-bold">{teams.length}</div><div className="text-xs text-emerald-600 mt-2">Líder: {standings[0]?.teamName ?? "—"}</div></CardBody></Card>
+          </Link>
+          <Link href={`/${sport}/players`} className="dashboard-metric-link" aria-label="Ver jugadores de la competición">
+            <Card className="dashboard-metric dashboard-metric-sky"><CardBody><div className="text-xs text-slate-500">Jugadores en planteles</div><div className="text-3xl font-bold">{competitionPlayers.size}</div><div className="text-xs text-slate-500 mt-2">Asociados actualmente a la competición</div></CardBody></Card>
+          </Link>
         </div>
 
-        <section className="dashboard-section-heading"><span>02 / LEAGUE READOUT</span><p>Jerarquía de clubes y producción ofensiva</p></section>
+        <section className="dashboard-section-heading"><span>02 / TABLA Y JUGADORES</span><p>Posiciones y rendimiento disponible</p></section>
         <div className="dashboard-data-grid">
           <Card className="dashboard-panel dashboard-standings lg:col-span-3">
             <CardHeader
@@ -163,7 +140,7 @@ export default async function SportLandingPage({
                     {standings.map((s, i) => (
                       <li
                         key={s.teamId}
-                        className="grid grid-cols-[32px_1fr_auto] items-center gap-3 py-2"
+                        className="grid grid-cols-[32px_32px_1fr_auto] items-center gap-3 py-2"
                       >
                         <span
                           className={`inline-flex h-8 w-8 items-center justify-center rounded-lg font-semibold text-sm ${
@@ -174,6 +151,7 @@ export default async function SportLandingPage({
                         >
                           {i + 1}
                         </span>
+                        <TeamCrest name={teamMap.get(s.teamId)?.name ?? s.teamName} shortName={teamMap.get(s.teamId)?.short_name ?? s.shortName} logoUrl={teamMap.get(s.teamId)?.logo_url} />
                         <div className="min-w-0">
                           <div className="font-medium text-slate-800 dark:text-slate-100 truncate">
                             <Link

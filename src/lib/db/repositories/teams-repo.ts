@@ -24,6 +24,23 @@ export async function getTeamsByLeagueId(leagueId: string): Promise<Team[]> {
   return data;
 }
 
+export async function getTeamsByLeagueIds(leagueIds: string[]): Promise<Map<string, Team[]>> {
+  if (leagueIds.length === 0) return new Map();
+  const db = await ensureDbReady();
+  const { data } = await db
+    .from<Team>("teams")
+    .in("league_id", leagueIds)
+    .order("name", "asc")
+    .select();
+  const byLeague = new Map<string, Team[]>();
+  for (const t of data) {
+    const arr = byLeague.get(t.league_id) ?? [];
+    arr.push(t);
+    byLeague.set(t.league_id, arr);
+  }
+  return byLeague;
+}
+
 export async function getTeamsByIds(ids: string[]): Promise<Team[]> {
   if (ids.length === 0) return [];
   const db = await ensureDbReady();

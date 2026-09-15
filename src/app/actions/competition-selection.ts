@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import {
   competitionSelectionCookie,
   isValidCompetitionSelection,
+  serializeCompetitionSelection,
 } from "@/lib/db/repositories/active-competition-repo";
 import { competitionSelectionSchema } from "@/lib/config/validation";
 
@@ -23,7 +24,7 @@ export async function selectCompetitionAction(formData: FormData): Promise<void>
 
   (await cookies()).set(
     competitionSelectionCookie(sportId),
-    `${leagueId}:${seasonId}`,
+    serializeCompetitionSelection(leagueId, seasonId),
     { path: "/", sameSite: "lax", maxAge: 60 * 60 * 24 * 30 },
   );
 }

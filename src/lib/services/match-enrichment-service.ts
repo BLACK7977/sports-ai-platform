@@ -47,6 +47,18 @@ function isNonEmptyArray(raw: unknown): boolean {
   return Array.isArray(raw) && raw.length > 0;
 }
 
+function eventContext(event: MatchEventInsert): Record<string, unknown> {
+  const value = event.sport_specific;
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {};
+}
+
+function relatedProviderPlayerId(event: MatchEventInsert): string | null {
+  const value = eventContext(event).related_player_provider_id;
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 function createDefaultDeps(): EnrichmentDeps {
   const client = new SportmonksClient();
   return {
@@ -115,6 +127,7 @@ export async function enrichMatchFromSportmonks(
   ])];
   const providerPlayerIds = [...new Set([
     ...events.map((e) => e.provider_player_id),
+    ...events.map(relatedProviderPlayerId),
     ...lineups.map((l) => l.provider_player_id),
   ])];
 
@@ -130,6 +143,16 @@ export async function enrichMatchFromSportmonks(
   for (const e of events) {
     if (e.provider_team_id) e.team_id = teamIdMap.get(e.provider_team_id) ?? null;
     if (e.provider_player_id) e.player_id = playerIdMap.get(e.provider_player_id) ?? null;
+    const relatedProviderId = relatedProviderPlayerId(e);
+    if (relatedProviderId) {
+      const context = eventContext(e);
+      const relatedInternalId = playerIdMap.get(relatedProviderId) ?? null;
+      if (relatedInternalId) context.related_player_id = relatedInternalId;
+      e.sport_specific = context;
+      // Sportmonks exposes the goal's second player as the structured related
+      // player. Store the resolved relation in the dedicated assist field.
+      if (e.event_type?.toUpperCase() === "GOAL") e.assist_player_id = relatedInternalId;
+    }
   }
   for (const l of lineups) {
     if (l.provider_team_id) l.team_id = teamIdMap.get(l.provider_team_id) ?? null;
