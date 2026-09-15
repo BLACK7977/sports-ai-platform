@@ -402,12 +402,12 @@ export default function MatchDetailPage({
             </Card>
           ) : null}
 
-          {(!enrichment?.lineups || enrichment.lineups.length === 0) && match.status === "scheduled" ? (
+          {!enrichment?.lineups || enrichment.lineups.length === 0 ? (
             <Card className="match-panel match-enrichment-module match-lineups-module">
               <CardHeader className="match-module-header">
-                <CardTitle><span className="module-kicker">PREPARTIDO</span> Alineaciones</CardTitle>
+                <CardTitle><span className="module-kicker">COBERTURA DEL PARTIDO</span> Alineaciones</CardTitle>
               </CardHeader>
-              <CardBody><div className="match-empty-state">Alineaciones aún no confirmadas.</div></CardBody>
+              <CardBody><div className="match-empty-state">Alineación aún no disponible</div></CardBody>
             </Card>
           ) : null}
 

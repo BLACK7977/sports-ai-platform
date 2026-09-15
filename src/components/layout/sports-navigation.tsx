@@ -3,16 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const sections = [
-  { href: "/soccer", label: "Dashboard", icon: "⌂", exact: true },
-  { href: "/soccer/matches", label: "Partidos", icon: "◉", exact: false },
-  { href: "/soccer/standings", label: "Tabla", icon: "▦", exact: false },
-  { href: "/soccer/players", label: "Plantillas", icon: "◈", exact: false },
-  { href: "/soccer/leaderboard", label: "Ranking", icon: "↗", exact: false },
-] as const;
+type SportNavProps = {
+  sport?: string;
+  variant?: "all" | "header" | "mobile";
+};
 
-export function SportsNavigation({ variant = "all" }: { variant?: "all" | "header" | "mobile" }) {
+function getSections(sport: string) {
+  return [
+    { href: `/${sport}`, label: "Resumen", icon: "⌂", exact: true },
+    { href: `/${sport}/matches`, label: "Partidos", icon: "◉", exact: false },
+    { href: `/${sport}/standings`, label: "Tabla", icon: "▦", exact: false },
+    { href: `/${sport}/players`, label: "Equipos", icon: "◈", exact: false },
+    { href: `/${sport}/leaderboard`, label: "Estadísticas", icon: "↗", exact: false },
+  ] as const;
+}
+
+export function SportsNavigation({ sport = "soccer", variant = "all" }: SportNavProps) {
   const pathname = usePathname();
+  const sections = getSections(sport);
 
   return (
     <>

@@ -944,7 +944,7 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
 .tactical-pitch-wrap { padding: 0.75rem; border-bottom: 1px solid rgba(83, 205, 255, 0.1); }
 .tactical-pitch-heading { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; color: #9bb8c5; font-family: var(--font-data); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .tactical-pitch-heading strong { color: #6eeaff; font-size: 0.68rem; }
-.tactical-pitch { position: relative; min-height: 19rem; overflow: hidden; border: 1px solid rgba(100, 236, 255, 0.36); border-radius: 0.5rem; background: linear-gradient(90deg, rgba(14, 65, 55, 0.62), rgba(8, 47, 45, 0.84)), repeating-linear-gradient(0deg, rgba(207, 255, 241, 0.035) 0 1px, transparent 1px 2.65rem); }
+.tactical-pitch { position: relative; min-height: 20rem; overflow: visible; border: 1px solid rgba(100, 236, 255, 0.36); border-radius: 0.5rem; background: linear-gradient(90deg, rgba(14, 65, 55, 0.72), rgba(8, 47, 45, 0.9)), repeating-linear-gradient(0deg, rgba(207, 255, 241, 0.05) 0 1px, transparent 1px 2.65rem); }
 .tactical-pitch::before { content: ""; position: absolute; inset: 4% 5%; border: 1px solid rgba(208, 255, 245, 0.22); pointer-events: none; }
 .tactical-pitch::after { content: ""; position: absolute; left: 5%; right: 5%; top: 50%; border-top: 1px solid rgba(208, 255, 245, 0.22); pointer-events: none; }
 .tactical-pitch-center { position: absolute; left: 50%; top: 50%; width: 3.5rem; aspect-ratio: 1; transform: translate(-50%, -50%); border: 1px solid rgba(208, 255, 245, 0.22); border-radius: 999px; pointer-events: none; }
@@ -960,10 +960,6 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
 .tactical-pitch-fallback { display: grid; gap: 0.5rem; padding: 0.75rem; border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 0.5rem; color: #b8cbd3; font-size: 0.74rem; }
 .tactical-pitch-fallback p { margin: 0; color: #f6d48d; }
 .tactical-pitch-fallback ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.35rem 0.75rem; margin: 0; padding: 0; list-style: none; }
-.match-lineup-player { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "jersey name" ". position"; column-gap: 0.55rem; row-gap: 0.18rem; }
-.match-lineup-jersey { grid-area: jersey; align-self: start; }
-.match-lineup-name { grid-area: name; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.match-lineup-pos { grid-area: position; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .match-hero-round { color: #75bbca; font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.04em; }
 .match-score-block-upcoming strong { color: #67e8f9; font-size: clamp(1.65rem, 5vw, 2.6rem); letter-spacing: 0.12em; text-shadow: none; }
 .match-team-block strong { max-width: 15ch; overflow-wrap: normal; text-wrap: balance; }
@@ -987,9 +983,11 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
 }
 .match-lineup-player {
   display: grid;
-  grid-template-columns: 2.5rem 3rem 1fr;
-  align-items: center;
-  gap: 0.4rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "jersey name" "jersey position";
+  align-items: start;
+  column-gap: 0.55rem;
+  row-gap: 0.18rem;
   padding: 0.45rem 0.75rem;
   font-size: 0.76rem;
   color: #8fa7b8;
@@ -997,6 +995,8 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
 }
 .match-lineup-player:last-child { border-bottom: 0; }
 .match-lineup-jersey {
+  grid-area: jersey;
+  align-self: start;
   color: #5ce9ff;
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
@@ -1004,12 +1004,22 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
   font-size: 0.72rem;
 }
 .match-lineup-pos {
+  grid-area: position;
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
   color: #6a889b;
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
-.match-lineup-name { color: #c9e6f2; }
+.match-lineup-name {
+  grid-area: name;
+  min-width: 0;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  color: #c9e6f2;
+}
 .match-lineup-subs-header {
   padding: 0.45rem 0.75rem;
   color: #5e8193;
@@ -1122,6 +1132,120 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
    COMPETITION UX SPRINT 1
    ============================================================================ */
 
+/* Competition selector */
+.comp-selector {
+  position: relative;
+  flex-shrink: 0;
+}
+.comp-selector-trigger {
+  display: inline-flex;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(93, 226, 255, 0.2);
+  background: rgba(6, 17, 28, 0.6);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #c9dde7;
+  transition: border-color 160ms ease, color 160ms ease;
+  white-space: nowrap;
+}
+.comp-selector-trigger::-webkit-details-marker { display: none }
+.comp-selector-trigger::marker { content: "" }
+.comp-selector-trigger:hover {
+  border-color: rgba(93, 226, 255, 0.5);
+  color: #dff9ff;
+}
+.comp-selector-icon {
+  color: #65e8ff;
+  flex-shrink: 0;
+}
+.comp-selector[open] .comp-selector-icon {
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+}
+.comp-selector-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 50;
+  width: min(24rem, calc(100vw - 2rem));
+  border-radius: 0.75rem;
+  border: 1px solid rgba(93, 226, 255, 0.2);
+  background: #06111c;
+  padding: 0.85rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+.comp-selector-hint {
+  border-bottom: 1px solid rgba(93, 226, 255, 0.08);
+  padding-bottom: 0.65rem;
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  color: #6b8299;
+}
+.comp-selector-empty {
+  padding: 1rem 0;
+  font-size: 0.82rem;
+  color: #6b8299;
+  margin: 0;
+}
+.comp-selector-form {
+  display: grid;
+  gap: 0.65rem;
+}
+.comp-selector-field {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8da2b8;
+}
+.comp-selector-select {
+  border-radius: 0.4rem;
+  border: 1px solid rgba(93, 226, 255, 0.15);
+  background: rgba(6, 17, 28, 0.8);
+  padding: 0.5rem 0.65rem;
+  font-size: 0.82rem;
+  color: #c9dde7;
+  outline: none;
+  transition: border-color 160ms ease;
+}
+.comp-selector-select:focus {
+  border-color: rgba(93, 226, 255, 0.5);
+}
+.comp-selector-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.comp-selector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.comp-selector-status {
+  font-size: 0.72rem;
+  color: #65e8ff;
+}
+.comp-selector-apply {
+  border-radius: 0.4rem;
+  background: #65e8ff;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #06111c;
+  transition: background 160ms ease;
+  flex: 1;
+}
+.comp-selector-apply:hover { background: #91f0ff }
+.comp-selector-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Competition header */
 .comp-header {
   display: flex;
@@ -1134,6 +1258,12 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
 .comp-header-info {
   display: grid;
   gap: 0.3rem;
+  min-width: 0;
+}
+.comp-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   min-width: 0;
 }
 .comp-header-eyebrow {
@@ -1160,14 +1290,12 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
   margin-top: 0.2rem;
 }
 .comp-header-country,
-.comp-header-season,
-.comp-header-provider {
+.comp-header-season {
   color: #8da2b8;
   font-size: 0.75rem;
 }
 .comp-header-country::before { content: "📍 "; }
 .comp-header-season::before { content: "📅 "; }
-.comp-header-provider::before { content: "🔗 "; }
 .comp-header-actions {
   flex-shrink: 0;
 }
@@ -1671,6 +1799,22 @@ h1, h2, h3, .home-title, .match-score-block strong, .match-prediction-score stro
   }
   .comp-header-actions {
     width: 100%;
+  }
+  .comp-selector-panel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 1rem 1rem 0 0;
+    z-index: 60;
+  }
+  .comp-selector-trigger {
+    width: 100%;
+    justify-content: center;
   }
   .comp-metrics {
     grid-template-columns: 1fr 1fr;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container, Stack } from "@/components/ui/container";
 import { TeamCrest } from "@/components/sports/teams/team-crest";
 import { CompetitionNav } from "@/components/sports/competition-nav";
+import { getCompetitionTabs } from "@/shared/competition-tabs";
 import type { SoccerStandingsRow } from "@/sports/soccer/types";
 import type { Team } from "@/types/db/tables";
 
@@ -25,13 +26,7 @@ export default async function StandingsPage({
   teams: Team[];
 }) {
   const teamMap = new Map(teams.map((team) => [team.id, team]));
-  const tabs = [
-    { label: "Resumen", href: `/${sport}` },
-    { label: "Partidos", href: `/${sport}/matches` },
-    { label: "Tabla", href: `/${sport}/standings` },
-    { label: "Equipos", href: `/${sport}/players` },
-    { label: "Ranking", href: `/${sport}/leaderboard` },
-  ];
+  const tabs = getCompetitionTabs(sport);
 
   return (
     <Container size="wide" className="product-page standings-page">

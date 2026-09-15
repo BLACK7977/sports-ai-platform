@@ -14,7 +14,9 @@ import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statist
 import { ensureDbReady } from "@/lib/db/client";
 import { CompetitionSelector } from "@/components/sports/competition-selector";
 import { CompetitionNav } from "@/components/sports/competition-nav";
+import { LeagueLogo } from "@/components/sports/league-logo";
 import { TeamCrest } from "@/components/sports/teams/team-crest";
+import { getCompetitionTabs } from "@/shared/competition-tabs";
 
 export default async function SportLandingPage({ sport }: { sport: string }) {
   const has = getHasSport(sport);
@@ -24,6 +26,7 @@ export default async function SportLandingPage({ sport }: { sport: string }) {
   const { active, candidates } = await getCompetitionSelectionState(sport);
   const mainLeague = active?.league;
   const mainSeason = active?.season.id ?? "";
+  const leagueLogoUrl = (mainLeague?.sport_specific as Record<string, unknown>)?.logo_url as string | undefined;
   const [leagues, matches, teams, standings, topPlayers] = await Promise.all([
     getLeaguesBySportId(sport),
     mainLeague && mainSeason ? getMatchesByLeagueSeason(mainLeague.id, mainSeason) : Promise.resolve([]),
@@ -37,14 +40,7 @@ export default async function SportLandingPage({ sport }: { sport: string }) {
 
   const finished = matches.filter((m) => m.status === "finished").length;
   const scheduled = matches.filter((m) => m.status === "scheduled").length;
-
-  const tabs = [
-    { label: "Resumen", href: `/${sport}` },
-    { label: "Partidos", href: `/${sport}/matches` },
-    { label: "Tabla", href: `/${sport}/standings` },
-    { label: "Equipos", href: `/${sport}/players` },
-    { label: "Ranking", href: `/${sport}/leaderboard` },
-  ];
+  const tabs = getCompetitionTabs(sport);
 
   return (
     <Container size="wide" className="product-page competition-page">
@@ -54,17 +50,17 @@ export default async function SportLandingPage({ sport }: { sport: string }) {
             <span className="comp-header-eyebrow">
               {sportDef.emoji} {sportDef.displayName}
             </span>
-            <h1 className="comp-header-title">
-              {mainLeague?.name ?? "Competición"}
-            </h1>
+            <div className="comp-header-title-row">
+              {mainLeague && <LeagueLogo name={mainLeague.name} logoUrl={leagueLogoUrl} size="md" />}
+              <h1 className="comp-header-title">
+                {mainLeague?.name ?? "Competición"}
+              </h1>
+            </div>
             <div className="comp-header-meta">
               {mainLeague?.country && (
                 <span className="comp-header-country">{mainLeague.country}</span>
               )}
               <span className="comp-header-season">{active?.season.name ?? "Temporada"}</span>
-              <span className="comp-header-provider">
-                {mainLeague?.provider ? `${mainLeague.provider}` : "Datos internos"}
-              </span>
             </div>
           </div>
           <div className="comp-header-actions">
@@ -110,7 +106,7 @@ export default async function SportLandingPage({ sport }: { sport: string }) {
           <Link href={`/${sport}/leaderboard`} className="comp-metric-link">
             <Card className="comp-metric">
               <CardBody>
-                <div className="comp-metric-label">Ranking</div>
+                <div className="comp-metric-label">Estadísticas</div>
                 <div className="comp-metric-value">{topPlayers.length}</div>
                 <div className="comp-metric-detail">Jugadores rankeados</div>
               </CardBody>
@@ -154,14 +150,14 @@ export default async function SportLandingPage({ sport }: { sport: string }) {
           </Card>
 
           <Card className="comp-panel">
-            <CardHeader action={<LinkButton size="sm" tone="ghost" href={`/${sport}/leaderboard`}>Ver ranking</LinkButton>}>
+            <CardHeader action={<LinkButton size="sm" tone="ghost" href={`/${sport}/leaderboard`}>Ver estadísticas</LinkButton>}>
               <CardTitle>Top jugadores</CardTitle>
               <CardSubtitle>Temporada actual</CardSubtitle>
             </CardHeader>
             <CardBody className="!p-0">
               {topPlayers.length === 0 ? (
                 <div className="comp-empty-inline">
-                  <span>No hay datos de ranking disponibles.</span>
+                  <span>No hay datos de estadísticas disponibles.</span>
                 </div>
               ) : (
                 <div className="players-mini">

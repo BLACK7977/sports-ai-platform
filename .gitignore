@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# Execution-only backfill checkpoints/locks (no credentials)
+/.backfill/
+
 # next.js
 /.next/
 /out/

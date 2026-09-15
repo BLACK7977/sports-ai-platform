@@ -9,6 +9,7 @@ import { ensureDbReady } from "@/lib/db/client";
 import { matchDetailHref } from "@/lib/navigation/match-detail-href";
 import { TeamCrest } from "@/components/sports/teams/team-crest";
 import { CompetitionNav } from "@/components/sports/competition-nav";
+import { getCompetitionTabs } from "@/shared/competition-tabs";
 import type { Match, Team } from "@/types/db/tables";
 
 const views = ["week", "today", "upcoming", "finished", "all"] as const;
@@ -59,14 +60,7 @@ export default async function MatchesListPage({ sport, view: rawView, week: rawW
   const teamMap = new Map(teams.map((team) => [team.id, team]));
 
   const context = view === "week" ? `Semana: ${weekLabel(weekRange.start, weekRange.end)}` : labels[view];
-
-  const tabs = [
-    { label: "Resumen", href: `/${sport}` },
-    { label: "Partidos", href: `/${sport}/matches` },
-    { label: "Tabla", href: `/${sport}/standings` },
-    { label: "Equipos", href: `/${sport}/players` },
-    { label: "Ranking", href: `/${sport}/leaderboard` },
-  ];
+  const tabs = getCompetitionTabs(sport);
 
   return (
     <Container size="wide" className="product-page match-list-page">
