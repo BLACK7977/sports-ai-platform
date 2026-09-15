@@ -1,27 +1,15 @@
 import Link from "next/link";
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  CardSubtitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Container, Stack, Row } from "@/components/ui/container";
-import { LinkButton } from "@/components/ui/button";
-import {
-  DataTable,
-  TableHead,
-  Th,
-  TableBody,
-  Tr,
-  Td,
-} from "@/components/ui/table";
-import { getHasSport } from "@/components/sports/sport-helpers";
-import { StandingsBars, TeamFormStrip } from "@/components/charts/svg-charts";
+import { Container, Stack } from "@/components/ui/container";
 import { TeamCrest } from "@/components/sports/teams/team-crest";
+import { CompetitionNav } from "@/components/sports/competition-nav";
 import type { SoccerStandingsRow } from "@/sports/soccer/types";
 import type { Team } from "@/types/db/tables";
+
+const FORM_MAP: Record<string, { letter: string; label: string }> = {
+  W: { letter: "G", label: "Ganado" },
+  D: { letter: "E", label: "Empatado" },
+  L: { letter: "P", label: "Perdido" },
+};
 
 export default async function StandingsPage({
   sport,
@@ -36,214 +24,106 @@ export default async function StandingsPage({
   standings: SoccerStandingsRow[];
   teams: Team[];
 }) {
-  const has = getHasSport(sport);
-  const sportEmoji = has?.sport.emoji ?? "⚽";
-  const sportName = has?.sport.displayName ?? "Deporte";
-
-  const maxPts = Math.max(1, ...standings.map((s) => s.points));
   const teamMap = new Map(teams.map((team) => [team.id, team]));
+  const tabs = [
+    { label: "Resumen", href: `/${sport}` },
+    { label: "Partidos", href: `/${sport}/matches` },
+    { label: "Tabla", href: `/${sport}/standings` },
+    { label: "Equipos", href: `/${sport}/players` },
+    { label: "Ranking", href: `/${sport}/leaderboard` },
+  ];
 
   return (
     <Container size="wide" className="product-page standings-page">
-      <Stack gap="xl">
-        <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div className="space-y-2">
-            <Row>
-              <Badge tone="primary">
-                <span className="mr-1">{sportEmoji}</span>
-                {sportName}
-              </Badge>
-              <Badge tone="info">{leagueName}</Badge>
-              <Badge tone="neutral">{seasonName}</Badge>
-            </Row>
-            <h1 className="page-title">
-              Tabla de posiciones
-            </h1>
-            <p className="text-slate-500 max-w-2xl">
-              Clasificación oficial con forma reciente, diferencia de gol y
-              gráfico comparativo de puntos.
-            </p>
+      <Stack gap="lg">
+        <header className="comp-header">
+          <div className="comp-header-info">
+            <span className="comp-header-eyebrow">
+              {leagueName}
+            </span>
+            <h1 className="comp-header-title">Tabla de posiciones</h1>
+            <span className="comp-header-season">{seasonName}</span>
           </div>
-          <Row className="flex-wrap gap-2">
-            <LinkButton href={`/${sport}`} tone="ghost" size="md">
-              ← Volver
-            </LinkButton>
-            <LinkButton href={`/${sport}/matches`} tone="outline" size="md">
-              Ver fixtures
-            </LinkButton>
-            <LinkButton
-              href={`/${sport}/leaderboard`}
-              tone="primary"
-              size="md"
-            >
-              Ranking jugadores
-            </LinkButton>
-          </Row>
         </header>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Card className="product-stat">
-            <CardBody>
-              <div className="text-xs text-slate-500">Equipos</div>
-              <div className="text-3xl font-bold">{standings.length}</div>
-              <div className="text-xs text-slate-500 mt-2">
-                {standings.reduce((a, s) => a + s.played, 0) / 2} fechas
-                disputadas
-              </div>
-            </CardBody>
-          </Card>
-          <Card className="product-stat product-stat-assists">
-            <CardBody>
-              <div className="text-xs text-slate-500">Líder</div>
-              <div className="text-2xl font-bold truncate">
-                {standings[0]?.teamName ?? "—"}
-              </div>
-              <div className="text-xs text-emerald-600 mt-2 font-medium">
-                {standings[0]?.points ?? 0} pts
-              </div>
-            </CardBody>
-          </Card>
-          <Card className="product-stat product-stat-discipline">
-            <CardBody>
-              <div className="text-xs text-slate-500">Goles a favor</div>
-              <div className="text-3xl font-bold">
-                {standings.reduce((a, s) => a + s.goalsFor, 0)}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">Temporada</div>
-            </CardBody>
-          </Card>
-          <Card className="product-stat">
-            <CardBody>
-              <div className="text-xs text-slate-500">Dif. gol total</div>
-              <div
-                className={`text-3xl font-bold ${
-                  standings.reduce((a, s) => a + s.goalDifference, 0) >= 0
-                    ? "text-emerald-600"
-                    : "text-rose-600"
-                }`}
-              >
-                {standings.reduce((a, s) => a + s.goalDifference, 0) >= 0
-                  ? "+"
-                  : ""}
-                {standings.reduce((a, s) => a + s.goalDifference, 0)}
-              </div>
-              <div className="text-xs text-slate-500 mt-2">Acumulado</div>
-            </CardBody>
-          </Card>
-        </div>
+        <CompetitionNav sport={sport} activeTab={`/${sport}/standings`} tabs={tabs} />
 
-        <Card className="product-panel">
-          <CardHeader>
-            <CardTitle>Comparativo de puntos</CardTitle>
-            <CardSubtitle>Barras por equipo · colores por puesto</CardSubtitle>
-          </CardHeader>
-          <CardBody>
-            {standings.length === 0 ? (
-              <p className="text-sm text-slate-400">Sin datos.</p>
-            ) : (
-              <StandingsBars
-                data={standings.map((s) => ({
-                  name: s.teamName,
-                  short: s.shortName,
-                  value: s.points,
-                  max: maxPts,
-                }))}
-              />
-            )}
-          </CardBody>
-        </Card>
-
-        <Card className="product-panel">
-          <CardHeader>
-            <CardTitle>Tabla completa</CardTitle>
-            <CardSubtitle>
-              Criterio: Puntos → Dif. gol → Goles a favor → Nombre
-            </CardSubtitle>
-          </CardHeader>
-          <CardBody className="!p-0">
-            {standings.length === 0 ? (
-              <div className="p-6 text-sm text-slate-400">Sin datos.</div>
-            ) : (
-              <DataTable>
-                <TableHead>
-                    <Th className="w-10">#</Th>
-                    <Th>Equipo</Th>
-                    <Th className="text-right">PJ</Th>
-                    <Th className="text-right">W</Th>
-                    <Th className="text-right">D</Th>
-                    <Th className="text-right">L</Th>
-                    <Th className="text-right">GF</Th>
-                    <Th className="text-right">GC</Th>
-                    <Th className="text-right">Diff</Th>
-                    <Th className="text-right">Pts</Th>
-                    <Th className="min-w-[120px]">Forma</Th>
-                </TableHead>
-                <TableBody>
-                  {standings.map((s, i) => (
-                    <Tr key={s.teamId} hoverable>
-                      <Td>
-                        <span
-                          className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${
-                            i === 0
-                              ? "bg-indigo-600 text-white"
-                              : i === 1
-                                ? "bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-200"
-                                : i === 2
-                                  ? "bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-200"
-                                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200"
-                          }`}
-                        >
-                          {i + 1}
-                        </span>
-                      </Td>
-                      <Td>
-                        <div className="flex items-center gap-2">
-                          <TeamCrest name={teamMap.get(s.teamId)?.name ?? s.teamName} shortName={teamMap.get(s.teamId)?.short_name ?? s.shortName} logoUrl={teamMap.get(s.teamId)?.logo_url} />
-                        <Link
-                          href={`/${sport}/leaderboard`}
-                          className="font-medium hover:underline text-slate-800 dark:text-slate-100"
-                        >
-                          {s.teamName}
-                        </Link>
+        {standings.length === 0 ? (
+          <div className="comp-empty-state">
+            <span className="comp-empty-icon">📊</span>
+            <p>No hay datos de tabla disponibles para esta competición.</p>
+            <p className="comp-empty-sub">La tabla se muestra cuando hay partidos finalizados en la temporada.</p>
+          </div>
+        ) : (
+          <div className="standings-table-wrap">
+            <table className="standings-table">
+              <thead>
+                <tr>
+                  <th className="col-pos">#</th>
+                  <th className="col-team">Equipo</th>
+                  <th className="col-pj">PJ</th>
+                  <th className="col-extra col-g">G</th>
+                  <th className="col-extra col-e">E</th>
+                  <th className="col-extra col-p">P</th>
+                  <th className="col-extra col-gf">GF</th>
+                  <th className="col-extra col-gc">GC</th>
+                  <th className="col-extra col-dg">DG</th>
+                  <th className="col-pts">PTS</th>
+                  <th className="col-extra col-form">Forma</th>
+                </tr>
+              </thead>
+              <tbody>
+                {standings.map((s, i) => {
+                  const team = teamMap.get(s.teamId);
+                  return (
+                    <tr key={s.teamId}>
+                      <td className="col-pos">
+                        <span className="pos-badge">{i + 1}</span>
+                      </td>
+                      <td className="col-team">
+                        <div className="team-cell">
+                          <TeamCrest
+                            name={team?.name ?? s.teamName}
+                            shortName={team?.short_name ?? s.shortName}
+                            logoUrl={team?.logo_url}
+                            size="sm"
+                          />
+                          <span className="team-name">{s.teamName}</span>
                         </div>
-                      </Td>
-                      <Td className="text-right tabular-nums">{s.played}</Td>
-                      <Td className="text-right tabular-nums text-emerald-600 font-medium">
-                        {s.won}
-                      </Td>
-                      <Td className="text-right tabular-nums text-amber-600 font-medium">
-                        {s.drawn}
-                      </Td>
-                      <Td className="text-right tabular-nums text-rose-600 font-medium">
-                        {s.lost}
-                      </Td>
-                      <Td className="text-right tabular-nums">{s.goalsFor}</Td>
-                      <Td className="text-right tabular-nums">
-                        {s.goalsAgainst}
-                      </Td>
-                      <Td
-                        className={`text-right tabular-nums font-semibold ${
-                          s.goalDifference >= 0
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {s.goalDifference >= 0 ? "+" : ""}
-                        {s.goalDifference}
-                      </Td>
-                      <Td className="text-right tabular-nums font-bold text-lg">
-                        {s.points}
-                      </Td>
-                      <Td>
-                        <TeamFormStrip form={s.recentForm} size={20} />
-                      </Td>
-                    </Tr>
-                  ))}
-                </TableBody>
-              </DataTable>
-            )}
-          </CardBody>
-        </Card>
+                      </td>
+                      <td className="col-pj tabular">{s.played}</td>
+                      <td className="col-extra col-g tabular">{s.won}</td>
+                      <td className="col-extra col-e tabular">{s.drawn}</td>
+                      <td className="col-extra col-p tabular">{s.lost}</td>
+                      <td className="col-extra col-gf tabular">{s.goalsFor}</td>
+                      <td className="col-extra col-gc tabular">{s.goalsAgainst}</td>
+                      <td className={`col-extra col-dg tabular ${s.goalDifference >= 0 ? "dg-pos" : "dg-neg"}`}>
+                        {s.goalDifference >= 0 ? "+" : ""}{s.goalDifference}
+                      </td>
+                      <td className="col-pts tabular">{s.points}</td>
+                      <td className="col-extra col-form">
+                        <span className="form-strip" role="img" aria-label={`Forma reciente: ${s.recentForm.slice(-5).map((r) => FORM_MAP[r]?.label ?? r).join(", ")}`}>
+                          {s.recentForm.slice(-5).map((r, fi) => {
+                            const mapped = FORM_MAP[r];
+                            return (
+                              <span
+                                key={fi}
+                                className={`form-letter form-${r}`}
+                                title={mapped?.label ?? r}
+                              >
+                                {mapped?.letter ?? r}
+                              </span>
+                            );
+                          })}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Stack>
     </Container>
   );
