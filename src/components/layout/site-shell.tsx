@@ -132,8 +132,9 @@ export async function SiteHeader() {
             </div>
           </details>
           <Row className="hidden md:flex" gap="sm">
+            <span aria-hidden className="h-6 w-px bg-[#00e5ff]/15" />
             {dbStatusBadge()}
-            <span className="text-xs text-slate-400">v0.1 · MVP</span>
+            <span className="text-xs text-slate-500">v0.1 · Beta</span>
           </Row>
         </Container>
       </header>

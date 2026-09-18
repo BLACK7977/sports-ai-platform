@@ -113,6 +113,7 @@ export default function MatchPredictionPanel({
       <CardBody>
         {prediction ? (() => {
           const percentages = probabilityPercentages(prediction.probabilities);
+          const top = Math.max(percentages.home, percentages.draw, percentages.away);
           return (
           <>
             <div className="match-prediction-view">
@@ -123,7 +124,14 @@ export default function MatchPredictionPanel({
                 ["Empate", percentages.draw],
                 ["Visitante", percentages.away],
               ] as const).map(([label, percentage]) => (
-                <div key={label}><span>{label}</span><strong>{percentage}%</strong></div>
+                <div
+                  key={label}
+                  role="group"
+                  className={`match-prediction-cell${percentage === top ? " match-prediction-cell--top" : ""}`}
+                  aria-label={`${label} ${percentage}%`}
+                >
+                  <span>{label}</span><strong>{percentage}%</strong>
+                </div>
               ))}
             </div>
             <div className="match-prediction-track" aria-hidden="true">

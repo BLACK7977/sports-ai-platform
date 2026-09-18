@@ -122,7 +122,7 @@ function PredictionCard({ row }: { row: HistoryViewRow }) {
           <div className="match-report-grid">
             <div>
               <span className="match-report-label">Resultado final</span>
-              <p>
+              <p className={row.correct ? "history-hit" : "history-miss"}>
                 {row.result ? `${row.result.homeScore} - ${row.result.awayScore}` : "—"} ·{" "}
                 {row.correct ? "Acierto" : "Fallo"}
               </p>

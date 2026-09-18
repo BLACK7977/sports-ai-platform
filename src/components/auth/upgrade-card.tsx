@@ -20,17 +20,15 @@ export function UpgradeCard() {
       </CardHeader>
       <CardBody>
         <div className="space-y-4">
-          <div className="match-empty-state">
-            <ul className="space-y-2 text-sm text-slate-300">
-              {features.map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <span className="mt-0.5 text-cyan-400" aria-hidden>▸</span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="flex items-center gap-3">
+          <ul className="upgrade-features">
+            {features.map((f) => (
+              <li key={f}>
+                <span className="upgrade-feature-marker" aria-hidden>▸</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-center gap-3 pt-1">
             <Badge tone="info" className="text-[10px] tracking-wider uppercase">
               Próximamente
             </Badge>

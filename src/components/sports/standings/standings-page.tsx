@@ -52,19 +52,20 @@ export default async function StandingsPage({
         ) : (
           <div className="standings-table-wrap">
             <table className="standings-table">
+              <caption className="sr-only">Tabla de posiciones de {leagueName}</caption>
               <thead>
                 <tr>
-                  <th className="col-pos">#</th>
-                  <th className="col-team">Equipo</th>
-                  <th className="col-pj">PJ</th>
-                  <th className="col-extra col-g">G</th>
-                  <th className="col-extra col-e">E</th>
-                  <th className="col-extra col-p">P</th>
-                  <th className="col-extra col-gf">GF</th>
-                  <th className="col-extra col-gc">GC</th>
-                  <th className="col-extra col-dg">DG</th>
-                  <th className="col-pts">PTS</th>
-                  <th className="col-extra col-form">Forma</th>
+                  <th scope="col" className="col-pos">#</th>
+                  <th scope="col" className="col-team">Equipo</th>
+                  <th scope="col" className="col-pj">PJ</th>
+                  <th scope="col" className="col-extra col-g">G</th>
+                  <th scope="col" className="col-extra col-e">E</th>
+                  <th scope="col" className="col-extra col-p">P</th>
+                  <th scope="col" className="col-extra col-gf">GF</th>
+                  <th scope="col" className="col-extra col-gc">GC</th>
+                  <th scope="col" className="col-extra col-dg">DG</th>
+                  <th scope="col" className="col-pts">PTS</th>
+                  <th scope="col" className="col-extra col-form">Forma</th>
                 </tr>
               </thead>
               <tbody>
