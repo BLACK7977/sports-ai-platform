@@ -19,7 +19,9 @@
 export type AiRateAction =
   | "match-analysis"
   | "match-prediction"
-  | "player-report";
+  | "probable-lineup"
+  | "player-report"
+  | "explanation";
 
 export type AiRateWindow = { windowMs: number; max: number };
 
@@ -38,9 +40,17 @@ export const AI_RATE_LIMITS: Record<AiRateAction, AiRatePolicy> = {
     minute: { windowMs: 60_000, max: 3 },
     hour: { windowMs: 3_600_000, max: 20 },
   },
+  "probable-lineup": {
+    minute: { windowMs: 60_000, max: 3 },
+    hour: { windowMs: 3_600_000, max: 20 },
+  },
   "player-report": {
     minute: { windowMs: 60_000, max: 2 },
     hour: { windowMs: 3_600_000, max: 10 },
+  },
+  "explanation": {
+    minute: { windowMs: 60_000, max: 3 },
+    hour: { windowMs: 3_600_000, max: 20 },
   },
 };
 

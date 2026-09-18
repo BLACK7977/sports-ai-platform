@@ -351,6 +351,14 @@ export async function createPreKickoffPrediction(
   if (!preview.created) {
     return { prediction: preview.prediction, created: false };
   }
+  return persistPredictionPreview(deps, preview);
+}
+
+/** Persists an already validated/modelled preview without running the model twice. */
+export async function persistPredictionPreview(
+  deps: PredictionServiceDeps,
+  preview: Extract<PreviewPredictionResult, { created: true }>,
+): Promise<CreatePredictionResult> {
   const { payload } = preview;
   // Carrera concurrente: dos requests pueden pasar findExisting() con null
   // antes de que cualquiera inserte. La UNIQUE(match,market,model) de la DB

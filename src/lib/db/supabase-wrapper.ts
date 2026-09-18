@@ -3,14 +3,16 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   Sport, League, Season, Team, Player, Match, PlayerMatchStats, Prediction, PredictionEvaluation,
   MatchMetadata, MatchStatistic, MatchEvent, MatchLineup,
+  ProbableLineupRun, ProbableLineupPlayer,
   SportInsert, LeagueInsert, SeasonInsert, TeamInsert, PlayerInsert, MatchInsert, PlayerMatchStatsInsert,
   MatchMetadataInsert, MatchStatisticInsert, MatchEventInsert, MatchLineupInsert,
+  ProbableLineupRunInsert, ProbableLineupPlayerInsert,
 } from "@/types/db/tables";
 import { getEnv, getSupabaseProjectUrl } from "@/lib/config/env";
 
-export type Tables = { sports: Sport; leagues: League; seasons: Season; teams: Team; players: Player; matches: Match; player_match_stats: PlayerMatchStats; predictions: Prediction; prediction_evaluations: PredictionEvaluation; match_metadata: MatchMetadata; match_statistics: MatchStatistic; match_events: MatchEvent; match_lineups: MatchLineup; };
+export type Tables = { sports: Sport; leagues: League; seasons: Season; teams: Team; players: Player; matches: Match; player_match_stats: PlayerMatchStats; predictions: Prediction; prediction_evaluations: PredictionEvaluation; match_metadata: MatchMetadata; match_statistics: MatchStatistic; match_events: MatchEvent; match_lineups: MatchLineup; probable_lineup_runs: ProbableLineupRun; probable_lineup_players: ProbableLineupPlayer; };
 export type TableName = keyof Tables;
-const TABLE_NAMES: TableName[] = ["sports","leagues","seasons","teams","players","matches","player_match_stats","predictions","prediction_evaluations","match_metadata","match_statistics","match_events","match_lineups"];
+const TABLE_NAMES: TableName[] = ["sports","leagues","seasons","teams","players","matches","player_match_stats","predictions","prediction_evaluations","match_metadata","match_statistics","match_events","match_lineups","probable_lineup_runs","probable_lineup_players"];
 type OrderDir = "asc" | "desc";
 type AnyRow =
   | Sport
@@ -25,8 +27,10 @@ type AnyRow =
   | MatchMetadata
   | MatchStatistic
   | MatchEvent
-  | MatchLineup;
-type AnyInsert = SportInsert | LeagueInsert | SeasonInsert | TeamInsert | PlayerInsert | MatchInsert | PlayerMatchStatsInsert | MatchMetadataInsert | MatchStatisticInsert | MatchEventInsert | MatchLineupInsert;
+  | MatchLineup
+  | ProbableLineupRun
+  | ProbableLineupPlayer;
+type AnyInsert = SportInsert | LeagueInsert | SeasonInsert | TeamInsert | PlayerInsert | MatchInsert | PlayerMatchStatsInsert | MatchMetadataInsert | MatchStatisticInsert | MatchEventInsert | MatchLineupInsert | ProbableLineupRunInsert | ProbableLineupPlayerInsert;
 
 export type InsertShape<TN extends TableName> = TN extends "sports"
   ? SportInsert
@@ -48,7 +52,11 @@ export type InsertShape<TN extends TableName> = TN extends "sports"
                   ? MatchEventInsert
                   : TN extends "match_lineups"
                     ? MatchLineupInsert
-                    : PlayerMatchStatsInsert;
+                    : TN extends "probable_lineup_runs"
+                      ? ProbableLineupRunInsert
+                      : TN extends "probable_lineup_players"
+                        ? ProbableLineupPlayerInsert
+                        : PlayerMatchStatsInsert;
 
 export interface QueryBuilder<T> {
   eq<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;

@@ -10,6 +10,14 @@ import { getPlayersByIds } from "@/lib/db/repositories/players-repo";
 import { getTeamStandings, getPlayerSeasonRanking } from "@/lib/services/statistics-service";
 import { parseSportId, parseEntityId, safeDecodeEntityId } from "@/lib/config/validation";
 import { getEnrichment, type MatchEnrichment } from "@/lib/services/match-enrichment-service";
+import { getCanonicalPredictionRow } from "@/lib/db/repositories/predictions-repo";
+import { createProductionPredictionExplanationRepo } from "@/lib/db/repositories/prediction-explanation-repo";
+import { readPersistedExplanation } from "@/lib/services/prediction-explanation-service";
+import { presentExplanation, type PredictionExplanationView } from "@/lib/types/prediction-explanation";
+import { resolveExplanationPlanForRender } from "@/lib/presentation/explanation-availability";
+import { getProbableLineupForMatch } from "@/lib/db/repositories/probable-lineups-repo";
+import { DEFAULT_MARKET_ID, DEFAULT_MODEL_VERSION_ID } from "@/lib/ai/prediction-service";
+import { getPersistedMatchContext } from "@/lib/db/repositories/match-context-repo";
 
 export default async function MatchDetailRoute({
   params,
@@ -39,13 +47,16 @@ export default async function MatchDetailRoute({
   // El análisis y la predicción AI se generan SOLO on-demand desde
   // componentes client (botones), nunca en el SSR de esta página:
   // así no se consumen tokens de OpenAI por cada request/render.
-  const [matchStats, standings, allSeasonMatches, squadRanking, enrichment] =
+  const [matchStats, standings, allSeasonMatches, squadRanking, enrichment, canonicalPrediction, probableLineup, matchContext] =
     await Promise.all([
       getStatsByMatchId(id),
       getTeamStandings(sport, leagueId, seasonId),
       getMatchesByLeagueSeason(leagueId, seasonId),
       getPlayerSeasonRanking(sport, leagueId, seasonId),
       getEnrichment(id),
+      getCanonicalPredictionRow(id, DEFAULT_MARKET_ID, DEFAULT_MODEL_VERSION_ID),
+      getProbableLineupForMatch(id),
+      getPersistedMatchContext(id),
     ]);
 
   const allPlayerIds = [...new Set([
@@ -65,6 +76,24 @@ export default async function MatchDetailRoute({
     players.map((p) => [p.id, p]),
   );
 
+  // READ-ONLY persisted explanation for the render path. NEVER generates:
+  // no provider call from SSR, RSC, page load, refresh or navigation. Missing
+  // or unreadable explanation → null → the panel renders the neutral state.
+  let explainedView: PredictionExplanationView | null = null;
+  if (canonicalPrediction) {
+    const [plan, payload] = await Promise.all([
+      resolveExplanationPlanForRender(),
+      readPersistedExplanation(
+        { repo: createProductionPredictionExplanationRepo() },
+        { predictionId: canonicalPrediction.id },
+      ).catch(() => {
+        console.warn(`[match-detail] persisted explanation read failed: ${id}.`);
+        return null;
+      }),
+    ]);
+    explainedView = payload ? presentExplanation(payload, plan) : null;
+  }
+
   return (
     <MatchDetailPage
       sport={sport}
@@ -79,6 +108,10 @@ export default async function MatchDetailRoute({
       playerMap={playerMap}
       seasonTeams={seasonTeams}
       enrichment={enrichment}
+      canonicalPrediction={canonicalPrediction}
+      probableLineup={probableLineup}
+      matchContext={matchContext}
+      explanation={explainedView}
     />
   );
 }

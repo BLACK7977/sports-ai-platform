@@ -12,6 +12,8 @@ import type {
   MatchStatistic,
   MatchEvent,
   MatchLineup,
+  ProbableLineupRun,
+  ProbableLineupPlayer,
   SportInsert,
   LeagueInsert,
   SeasonInsert,
@@ -23,6 +25,8 @@ import type {
   MatchStatisticInsert,
   MatchEventInsert,
   MatchLineupInsert,
+  ProbableLineupRunInsert,
+  ProbableLineupPlayerInsert,
   MatchStatus,
 } from "@/types/db/tables";
 
@@ -40,6 +44,8 @@ type Tables = {
   match_statistics: MatchStatistic;
   match_events: MatchEvent;
   match_lineups: MatchLineup;
+  probable_lineup_runs: ProbableLineupRun;
+  probable_lineup_players: ProbableLineupPlayer;
 };
 
 export type TableName = keyof Tables;
@@ -58,6 +64,8 @@ const TABLE_NAMES: TableName[] = [
   "match_statistics",
   "match_events",
   "match_lineups",
+  "probable_lineup_runs",
+  "probable_lineup_players",
 ];
 
 type OrderDir = "asc" | "desc";
@@ -95,6 +103,8 @@ class InMemoryStoreImpl {
     match_statistics: new Map(),
     match_events: new Map(),
     match_lineups: new Map(),
+    probable_lineup_runs: new Map(),
+    probable_lineup_players: new Map(),
   };
   private initialized = false;
 
@@ -523,7 +533,11 @@ type InsertShape<TN extends TableName> = TN extends "sports"
                   ? MatchEventInsert
                   : TN extends "match_lineups"
                     ? MatchLineupInsert
-                    : PlayerMatchStatsInsert;
+                    : TN extends "probable_lineup_runs"
+                      ? ProbableLineupRunInsert
+                      : TN extends "probable_lineup_players"
+                        ? ProbableLineupPlayerInsert
+                        : PlayerMatchStatsInsert;
 
 function mkMatch(
   id: string,

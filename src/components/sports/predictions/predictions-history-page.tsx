@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Container, Stack, Row } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
 import { MatchProbabilityBar } from "@/components/charts/svg-charts";
+import { publicModelVersionName } from "@/lib/presentation/model-version";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import type {
   HistoryViewRow,
@@ -96,7 +97,7 @@ function PredictionCard({ row }: { row: HistoryViewRow }) {
           {row.homeTeamName} vs {row.awayTeamName}
         </CardTitle>
         <CardSubtitle>
-          Kickoff {formatDateTime(row.kickoffAt)} · Predicha {formatDateTime(row.predictedAt)} · {row.modelVersionId}
+          Kickoff {formatDateTime(row.kickoffAt)} · Predicha {formatDateTime(row.predictedAt)} · {publicModelVersionName(row.modelVersionId)}
         </CardSubtitle>
       </CardHeader>
       <CardBody>

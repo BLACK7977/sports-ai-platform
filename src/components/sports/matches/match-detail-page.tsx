@@ -11,10 +11,18 @@ import { Container, Stack, Row, Divider } from "@/components/ui/container";
 import { LinkButton } from "@/components/ui/button";
 import { TeamFormStrip, MatchPointsComparison } from "@/components/charts/svg-charts";
 import MatchAiPanels from "@/components/sports/matches/match-ai-panels";
-import { TacticalPitch, type TacticalPitchPlayer } from "@/components/sports/matches/tactical-pitch";
+import MatchPredictionPanel from "@/components/sports/matches/match-prediction-panel";
+import ProbableLineupPanel from "@/components/sports/matches/probable-lineup-panel";
+import type { GeneratedUpcomingPrediction } from "@/app/[sport]/matches/[id]/actions";
+import { lineupUIPrecedence, probableLineupViews } from "@/lib/presentation/probable-lineup";
+import { OfficialLineupsRenderer } from "@/components/sports/matches/official-lineups-renderer";
+import { MatchCoachesCard, MatchVenueCard } from "@/components/sports/matches/match-context-cards";
+import type { PersistedMatchContext } from "@/lib/types/match-context";
 import { matchDetailHref } from "@/lib/navigation/match-detail-href";
 import { presentSoccerPosition } from "@/lib/presentation/soccer";
-import type { Match, League, Player, PlayerMatchStats, Team, MatchMetadata, MatchStatistic, MatchEvent, MatchLineup } from "@/types/db/tables";
+import { persistedVenueView } from "@/lib/presentation/match-venue";
+import type { PredictionExplanationView } from "@/lib/types/prediction-explanation";
+import type { Match, League, Player, PlayerMatchStats, Team, MatchMetadata, MatchStatistic, MatchEvent, MatchLineup, Prediction, ProbableLineupPlayer, ProbableLineupRun } from "@/types/db/tables";
 import type { SoccerStandingsRow } from "@/sports/soccer/types";
 
 /* eslint-disable @next/next/no-img-element */
@@ -130,7 +138,7 @@ function ClubCrest({ team, away = false }: { team: Team; away?: boolean }) {
 }
 
 export default function MatchDetailPage({
-  sport,
+sport,
   match,
   home,
   away,
@@ -140,8 +148,12 @@ export default function MatchDetailPage({
   allSeasonMatches,
   squadRanking,
   playerMap,
-  seasonTeams,
+seasonTeams,
   enrichment,
+  canonicalPrediction,
+  probableLineup,
+  matchContext,
+  explanation,
 }: {
   sport: string;
   match: Match;
@@ -160,6 +172,10 @@ export default function MatchDetailPage({
     events: MatchEvent[];
     lineups: MatchLineup[];
   };
+canonicalPrediction?: Prediction | null;
+  probableLineup?: { runs: ProbableLineupRun[]; players: ProbableLineupPlayer[] } | null;
+  matchContext: PersistedMatchContext;
+  explanation?: PredictionExplanationView | null;
 }) {
   const homeStanding = standings.find((row) => row.teamId === home.id);
   const awayStanding = standings.find((row) => row.teamId === away.id);
@@ -210,7 +226,8 @@ export default function MatchDetailPage({
     );
   };
   const meta = enrichment?.metadata;
-  const venueName = meta?.venue_name ?? homeClub.stadium ?? null;
+  const venue = persistedVenueView(meta);
+  const venueName = venue?.name ?? null;
   const refereeName = meta?.main_referee_name ?? null;
   const homeFormation = meta?.home_formation ?? null;
   const awayFormation = meta?.away_formation ?? null;
@@ -244,9 +261,37 @@ export default function MatchDetailPage({
   ].filter(Boolean) as string[];
   const liveMinute = jsonNumber(matchData, ["minute", "match_minute", "elapsed"]);
   const hasDisplayScore = (match.status === "finished" || match.status === "in_progress") && homeScore != null && awayScore != null;
-  const scoreContext = match.status === "in_progress"
+  const isFutureScheduled = match.status === "scheduled" && Number.isFinite(Date.parse(match.match_date)) && Date.parse(match.match_date) > Date.now();
+  const hasOfficialLineups = Boolean(enrichment?.lineups && enrichment.lineups.length > 0);
+  const canonicRuns = probableLineup?.runs ?? [];
+  const hasCanonicalProbable = canonicRuns.some((run) => run.status === "AVAILABLE");
+  const probableViews = probableLineupViews(canonicRuns, probableLineup?.players ?? []);
+  const lineupPrecedence = lineupUIPrecedence({
+    hasOfficial: hasOfficialLineups,
+    hasCanonicalProbable,
+    isFutureScheduled,
+  });
+  const persistedProbs = canonicalPrediction?.model_probabilities;
+  const predictionProbs = persistedProbs && typeof persistedProbs === "object" && !Array.isArray(persistedProbs)
+    ? persistedProbs as Record<string, unknown> : null;
+  const pHome = typeof predictionProbs?.home === "number" ? predictionProbs.home : null;
+  const pDraw = typeof predictionProbs?.draw === "number" ? predictionProbs.draw : null;
+  const pAway = typeof predictionProbs?.away === "number" ? predictionProbs.away : null;
+  const persistedPredictionValid = [pHome, pDraw, pAway].every((value) => value !== null && Number.isFinite(value));
+  const snapshot = canonicalPrediction?.data_snapshot && typeof canonicalPrediction.data_snapshot === "object" && !Array.isArray(canonicalPrediction.data_snapshot) ? canonicalPrediction.data_snapshot as Record<string, unknown> : null;
+  const xg = snapshot?.expectedGoals && typeof snapshot.expectedGoals === "object" && !Array.isArray(snapshot.expectedGoals) ? snapshot.expectedGoals as Record<string, unknown> : null;
+const scoreContext = match.status === "in_progress"
     ? liveMinute != null ? `EN VIVO · ${liveMinute}'` : "EN VIVO"
     : match.status === "finished" ? "FINALIZADO" : "PRÓXIMO";
+  const initialPrediction: GeneratedUpcomingPrediction | null = canonicalPrediction && persistedPredictionValid
+    ? {
+        probabilities: { home: pHome as number, draw: pDraw as number, away: pAway as number },
+        expectedGoals: typeof xg?.home === "number" && typeof xg?.away === "number"
+          ? { home: xg.home, away: xg.away }
+          : null,
+        predictedAt: canonicalPrediction.predicted_at,
+      }
+    : null;
   const teamLeaders = (teamId: string) => squadRanking
     .filter((player) => player.teamId === teamId)
     .sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || b.goals - a.goals)
@@ -302,8 +347,16 @@ export default function MatchDetailPage({
                 currentClub.nickname ? ["APODO", currentClub.nickname] : null,
               ].filter((field): field is [string, string] => Boolean(field));
               return <div key={currentTeam.id}><b>{currentTeam.short_name}</b>{fields.map(([label, value]) => <span key={label}>{label} <strong>{value}</strong></span>)}</div>;
-            })}</div> : <div className="match-empty-state match-team-profile-empty"><span>Los perfiles permanentes de los equipos aún no están disponibles.</span><span>El estadio mostrado arriba corresponde a este partido.</span></div>}
+            })}</div> : !isFutureScheduled ? <div className="match-empty-state match-team-profile-empty"><span>Los perfiles permanentes de los equipos aún no están disponibles.</span></div> : null}
           </section>
+
+          {isFutureScheduled ? <MatchPredictionPanel sport={sport} matchId={match.id} initialPrediction={initialPrediction} explanation={explanation ?? null} /> : null}
+
+          {isFutureScheduled ? <MatchCoachesCard coaches={matchContext.coaches} homeTeamId={home.id} awayTeamId={away.id} kickoff={match.match_date} /> : null}
+
+          {isFutureScheduled && matchContext.venue ? <MatchVenueCard venue={matchContext.venue} /> : null}
+
+          {isFutureScheduled && !matchContext.venue ? <Card className="match-panel match-venue-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SEDE</span> Estadio</CardTitle></CardHeader><CardBody>{venue ? <div className="text-sm text-slate-300"><strong className="block text-slate-100">{venue.name}</strong>{[venue.city, venue.capacity ? `${venue.capacity.toLocaleString()} espectadores` : null, venue.surface].filter(Boolean).join(" · ")}</div> : <div className="match-empty-state match-compact-empty">Información del estadio aún no disponible</div>}</CardBody></Card> : null}
 
           <section className="match-primary-data grid grid-cols-1 lg:grid-cols-5 gap-4" aria-label="Datos disponibles del partido">
             <Card className="match-panel match-real-data-panel match-comparison-module lg:col-span-3"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">DATOS DISPONIBLES</span> Comparación</CardTitle><CardSubtitle>Local frente a visitante · temporada y partido cuando existe el dato</CardSubtitle></CardHeader><CardBody><div className="match-comparison"><div className="match-comparison-head"><span>Métrica</span><strong>{home.short_name}</strong><strong>{away.short_name}</strong></div>{comparison.map((metric) => {
@@ -322,7 +375,7 @@ export default function MatchDetailPage({
 
           <Card className="match-panel match-h2h-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">ARCHIVE / H2H</span> Historial directo</CardTitle><CardSubtitle>Enfrentamientos disponibles en esta temporada</CardSubtitle></CardHeader><CardBody>{h2h.length === 0 ? <div className="match-empty-state">No se registran enfrentamientos directos previos entre estos equipos en la temporada actual.</div> : <><div className="match-h2h-summary"><span><strong>{h2h.length}</strong> partidos</span><span><strong>{h2hSummary.homeWins}</strong> {home.short_name}</span><span><strong>{h2hSummary.draws}</strong> empates</span><span><strong>{h2hSummary.awayWins}</strong> {away.short_name}</span>{h2hSummary.unknown > 0 ? <span><strong>{h2hSummary.unknown}</strong> sin dato</span> : null}</div><div className="match-history-list">{h2h.map((item) => <Link href={matchDetailHref(sport, item.id)} key={item.id}><span>{new Date(item.match_date).toLocaleDateString()}</span><strong>{teamNameMap.get(item.home_team_id) ?? "LOCAL"} {item.home_score == null || item.away_score == null ? "—:—" : `${item.home_score} - ${item.away_score}`} {teamNameMap.get(item.away_team_id) ?? "VISITANTE"}</strong></Link>)}</div></>}</CardBody></Card>
 
-          {!enrichment || (enrichment.statistics.length === 0 && enrichment.events.length === 0 && enrichment.lineups.length === 0) ? <Card className="match-panel match-enrichment-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">COBERTURA DEL PARTIDO</span> Datos posteriores al encuentro</CardTitle></CardHeader><CardBody><div className="match-empty-state">Las estadísticas del partido estarán disponibles cuando la fuente las publique.</div></CardBody></Card> : null}
+          {!enrichment || (enrichment.statistics.length === 0 && enrichment.events.length === 0 && enrichment.lineups.length === 0) ? isFutureScheduled ? <p className="text-sm text-slate-400">Las estadísticas del partido estarán disponibles después del encuentro.</p> : <Card className="match-panel match-enrichment-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">COBERTURA DEL PARTIDO</span> Datos posteriores al encuentro</CardTitle></CardHeader><CardBody><div className="match-empty-state">Las estadísticas del partido estarán disponibles cuando la fuente las publique.</div></CardBody></Card> : null}
 
           {enrichment?.statistics && enrichment.statistics.length > 0 ? (
             <Card className="match-panel match-enrichment-module match-statistics-module">
@@ -402,68 +455,56 @@ export default function MatchDetailPage({
             </Card>
           ) : null}
 
-          {!enrichment?.lineups || enrichment.lineups.length === 0 ? (
+{enrichment && enrichment.lineups.length > 0 ? (
             <Card className="match-panel match-enrichment-module match-lineups-module">
               <CardHeader className="match-module-header">
-                <CardTitle><span className="module-kicker">COBERTURA DEL PARTIDO</span> Alineaciones</CardTitle>
-              </CardHeader>
-              <CardBody><div className="match-empty-state">Alineación aún no disponible</div></CardBody>
-            </Card>
-          ) : null}
-
-          {enrichment?.lineups && enrichment.lineups.length > 0 ? (
-            <Card className="match-panel match-enrichment-module match-lineups-module">
-              <CardHeader className="match-module-header">
-                <CardTitle><span className="module-kicker">ENRICHMENT</span> Alineaciones</CardTitle>
+                <CardTitle><span className="module-kicker">ALINEACIÓN OFICIAL</span> Alineaciones</CardTitle>
                 <CardSubtitle>{homeFormationLabel ?? "?"} / {awayFormationLabel ?? "?"}</CardSubtitle>
               </CardHeader>
               <CardBody>
-                <div className="match-lineups-grid">
-                  {[home, away].map((team) => {
-                    const teamLineups = enrichment.lineups.filter((lineup) => lineup.team_id === team.id);
-                    const hasStarterStatus = teamLineups.some((lineup) => lineup.is_starter !== null && lineup.is_starter !== undefined);
-                    const starters = teamLineups.filter((lineup) => lineup.is_starter === true);
-                    const subs = teamLineups.filter((lineup) => lineup.is_starter === false);
-                    const unclassified = teamLineups.filter((lineup) => lineup.is_starter === null || lineup.is_starter === undefined);
-                    const playerName = (lineup: MatchLineup) => lineup.player_id ? playerMap.get(lineup.player_id)?.full_name ?? lineup.player_name ?? null : lineup.player_name ?? null;
-                    const pitchPlayers: TacticalPitchPlayer[] = starters.flatMap((lineup) => {
-                      const fullName = playerName(lineup);
-                      return fullName && lineup.formation_field ? [{
-                        id: lineup.id,
-                        fullName,
-                        jerseyNumber: lineup.jersey_number ?? null,
-                        positionName: lineup.position_name ?? null,
-                        formationField: lineup.formation_field,
-                      }] : [];
-                    });
-                    const renderLineup = (lineup: MatchLineup, tone = "") => {
-                      const fullName = playerName(lineup);
-                      return <div className={`match-lineup-player${tone}`} key={lineup.id}>
-                        {lineup.jersey_number != null ? <span className="match-lineup-jersey">#{lineup.jersey_number}</span> : null}
-                        {presentSoccerPosition(lineup.position_name) ? <span className="match-lineup-pos">{presentSoccerPosition(lineup.position_name)}</span> : null}
-                        {fullName ? <span className="match-lineup-name">{fullName}</span> : null}
-                      </div>;
-                    };
-                    const unresolved = teamLineups.filter((lineup) => !playerName(lineup)).length;
-                    return (
-                      <section key={team.id} className="match-lineup-team">
-                        <header><b>{team.short_name}</b><small>{hasStarterStatus ? `${starters.length} titulares · ${subs.length} suplentes${unclassified.length ? ` · ${unclassified.length} sin clasificación` : ""}` : `${teamLineups.length} jugadores registrados · titularidad no informada`}</small></header>
-                        {hasStarterStatus && pitchPlayers.length > 0 ? <TacticalPitch teamName={team.name} formation={team.id === home.id ? homeFormationLabel : awayFormationLabel} players={pitchPlayers} /> : null}
-                        <div className="match-lineup-list">
-                          {hasStarterStatus ? <>{pitchPlayers.length < starters.length ? <div className="match-empty-state">Algunos titulares no tienen una ubicación táctica estructurada.</div> : null}{subs.length > 0 ? <div className="match-lineup-subs-header">Suplentes</div> : null}{subs.filter((lineup) => playerName(lineup)).map((lineup) => renderLineup(lineup, " match-lineup-sub"))}{unclassified.length > 0 ? <><div className="match-lineup-subs-header">Sin clasificación</div>{unclassified.filter((lineup) => playerName(lineup)).map((lineup) => renderLineup(lineup))}</> : null}</> : teamLineups.filter((lineup) => playerName(lineup)).map((lineup) => renderLineup(lineup))}
-                          {unresolved > 0 ? <div className="match-empty-state">{unresolved} jugador{unresolved === 1 ? "" : "es"} no pudo identificarse con la fuente.</div> : null}
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
+                <OfficialLineupsRenderer
+                  home={home}
+                  away={away}
+                  enrichment={enrichment}
+                  homeFormationLabel={homeFormationLabel}
+                  awayFormationLabel={awayFormationLabel}
+                  playerMap={playerMap}
+                />
               </CardBody>
             </Card>
-          ) : null}
+          ) : isFutureScheduled ? (
+            <Card className="match-panel match-enrichment-module match-lineups-module match-probable-lineup-module">
+              <CardHeader className="match-module-header">
+                <CardTitle><span className="module-kicker">PREDICCIÓN DE ALINEACIÓN</span> Alineación probable</CardTitle>
+                <CardSubtitle>Estimación de SPORTS AI a partir de alineaciones oficiales recientes</CardSubtitle>
+              </CardHeader>
+              <CardBody>
+                <ProbableLineupPanel
+                  sportId={sport}
+                  matchId={match.id}
+                  homeTeamId={home.id}
+                  homeTeamName={home.name}
+                  awayTeamId={away.id}
+                  awayTeamName={away.name}
+                  mode={lineupPrecedence === "probable" ? "probable" : "cta"}
+                  initialTeams={probableViews}
+                />
+              </CardBody>
+            </Card>
+          ) : (
+            <Card className="match-panel match-enrichment-module match-lineups-module">
+              <CardHeader className="match-module-header">
+                <CardTitle><span className="module-kicker">COBERTURA DEL PARTIDO</span> Alineación</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="match-empty-state match-compact-empty">Alineación aún no disponible</div>
+              </CardBody>
+            </Card>
+          )}
 
-          <Card className="match-panel match-roster-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SQUAD / SEASON</span> Jugadores clave</CardTitle><CardSubtitle>Referentes de esta competición, separados por equipo.</CardSubtitle></CardHeader><CardBody><div className="match-squad-summary"><span><b>{home.short_name}</b> {teamProduction(home.id)} contribuciones G+A</span><span><b>{away.short_name}</b> {teamProduction(away.id)} contribuciones G+A</span></div><div className="match-squad-grid">{[[home, teamLeaders(home.id)], [away, teamLeaders(away.id)]].map(([team, leaders]) => <section key={(team as Team).id} className="match-squad-team"><header><b>{(team as Team).name}</b><small>TOP 3 · TEMPORADA</small></header>{(leaders as import("@/sports/soccer/types").SoccerPlayerSeasonAggregate[]).length ? (leaders as import("@/sports/soccer/types").SoccerPlayerSeasonAggregate[]).map((leader) => { const player = playerMap.get(leader.playerId); const age = ageOf(player); return <Link key={leader.playerId} href={`/${sport}/players/${leader.playerId}`} className="match-squad-player"><span><strong>{leader.fullName}</strong><small>{leader.position}{player?.nationality ? ` · ${player.nationality}` : ""}{age ? ` · ${age} años` : ""}</small></span><b>{leader.goals}<i>G</i> · {leader.assists}<i>A</i></b></Link>; }) : <div className="match-empty-state">Sin estadísticas de temporada disponibles.</div>}</section>)}</div></CardBody></Card>
+          {!isFutureScheduled || teamLeaders(home.id).length > 0 || teamLeaders(away.id).length > 0 ? <Card className="match-panel match-roster-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SQUAD / SEASON</span> Jugadores clave</CardTitle><CardSubtitle>Referentes de esta competición, separados por equipo.</CardSubtitle></CardHeader><CardBody><div className="match-squad-summary"><span><b>{home.short_name}</b> {teamProduction(home.id)} contribuciones G+A</span><span><b>{away.short_name}</b> {teamProduction(away.id)} contribuciones G+A</span></div><div className="match-squad-grid">{[[home, teamLeaders(home.id)], [away, teamLeaders(away.id)]].map(([team, leaders]) => <section key={(team as Team).id} className="match-squad-team"><header><b>{(team as Team).name}</b><small>TOP 3 · TEMPORADA</small></header>{(leaders as import("@/sports/soccer/types").SoccerPlayerSeasonAggregate[]).length ? (leaders as import("@/sports/soccer/types").SoccerPlayerSeasonAggregate[]).map((leader) => { const player = playerMap.get(leader.playerId); const age = ageOf(player); return <Link key={leader.playerId} href={`/${sport}/players/${leader.playerId}`} className="match-squad-player"><span><strong>{leader.fullName}</strong><small>{leader.position}{player?.nationality ? ` · ${player.nationality}` : ""}{age ? ` · ${age} años` : ""}</small></span><b>{leader.goals}<i>G</i> · {leader.assists}<i>A</i></b></Link>; }) : <div className="match-empty-state">Sin estadísticas de temporada disponibles.</div>}</section>)}</div></CardBody></Card> : null}
 
-          <section className="match-experimental-zone" aria-labelledby="experimental-modules-title">
+          {!isFutureScheduled ? <section className="match-experimental-zone" aria-labelledby="experimental-modules-title">
             <div className="match-experimental-heading"><span>CAPA EXPERIMENTAL</span><h2 id="experimental-modules-title">Lecturas complementarias</h2><p>Se muestran aparte del marcador y de los datos registrados. Son interpretaciones de las señales disponibles, no resultados oficiales.</p></div>
 <div className="match-experimental-grid">
               <MatchAiPanels
@@ -476,9 +517,9 @@ export default function MatchDetailPage({
               />
               <Card className="match-panel match-experimental-module match-signal-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SEÑALES</span> Cobertura disponible</CardTitle><CardSubtitle>Datos que alimentan esta lectura</CardSubtitle></CardHeader><CardBody><div className="match-signal-list">{dataSignals.length ? dataSignals.map((signal) => <div key={signal}><span>+</span>{signal}</div>) : <div className="match-empty-state">No hay señales suficientes registradas.</div>}<div><span>·</span> Tiros, córners y posesión en directo cuando la fuente los entregue</div></div></CardBody></Card>
             </div>
-          </section>
+          </section> : null}
 
-          <section className="match-future-grid"><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> DT vs DT</CardTitle><CardSubtitle>Historial de entrenadores</CardSubtitle></CardHeader><CardBody><div className="match-empty-state">Disponible cuando exista una fuente con entrenadores, enfrentamientos y resultados históricos.</div></CardBody></Card><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> Modelo Sports AI</CardTitle><CardSubtitle>Arquitectura de modelos futuros</CardSubtitle></CardHeader><CardBody><div className="match-model-list"><span>Modelo estadístico <b>Próximamente</b></span><span>Modelo de forma <b>Próximamente</b></span><span>Modelo ofensivo <b>Próximamente</b></span><span>Modelo defensivo <b>Próximamente</b></span></div></CardBody></Card></section>
+          {!isFutureScheduled ? <section className="match-future-grid"><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> DT vs DT</CardTitle><CardSubtitle>Historial de entrenadores</CardSubtitle></CardHeader><CardBody><div className="match-empty-state">Disponible cuando exista una fuente con entrenadores, enfrentamientos y resultados históricos.</div></CardBody></Card><Card className="match-panel match-future-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">MÓDULO FUTURO</span> Modelo Sports AI</CardTitle><CardSubtitle>Arquitectura de modelos futuros</CardSubtitle></CardHeader><CardBody><div className="match-model-list"><span>Modelo estadístico <b>Próximamente</b></span><span>Modelo de forma <b>Próximamente</b></span><span>Modelo ofensivo <b>Próximamente</b></span><span>Modelo defensivo <b>Próximamente</b></span></div></CardBody></Card></section> : null}
 
           <Divider label="Otros partidos de la temporada" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{allSeasonMatches.filter((item) => item.id !== match.id).slice(0, 6).map((item) => <Link key={item.id} href={matchDetailHref(sport, item.id)}><Card className="match-panel match-related-card"><CardBody><Row className="justify-between"><span className="text-xs text-slate-400 font-mono">{new Date(item.match_date).toLocaleDateString()}</span><Badge tone={formatBadgeForStatus(item.status).tone}>{formatBadgeForStatus(item.status).label}</Badge></Row><div className="mt-3 grid grid-cols-[1fr_auto_1fr] gap-2 text-sm"><span className="truncate text-slate-300 font-medium">{teamNameMap.get(item.home_team_id) ?? "Equipo no disponible"}</span><strong className="text-center font-bold text-slate-100 tabular-nums">{item.status === "finished" && item.home_score != null && item.away_score != null ? `${item.home_score} - ${item.away_score}` : "vs"}</strong><span className="truncate text-right text-slate-300 font-medium">{teamNameMap.get(item.away_team_id) ?? "Equipo no disponible"}</span></div></CardBody></Card></Link>)}</div>

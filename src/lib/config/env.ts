@@ -40,6 +40,8 @@ const envSchema = z.object({
   SPORTMONKS_BASE_URL: optionalUrl,
   OPENAI_API_KEY: optionalString,
   OPENAI_MODEL: z.string().default("gpt-4o-mini"),
+  GEMINI_API_KEY: optionalString,
+  GEMINI_MODEL: z.string().default("gemini-3.1-flash-lite"),
 
   ENABLE_OFFLINE_MODE: z
     .preprocess(booleanFromString, z.boolean().default(false)),
@@ -75,6 +77,8 @@ function parseEnv(): Env {
     SPORTMONKS_BASE_URL: process.env.SPORTMONKS_BASE_URL,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_MODEL: process.env.GEMINI_MODEL,
     ENABLE_OFFLINE_MODE: process.env.ENABLE_OFFLINE_MODE,
     USE_LLM_MOCK: process.env.USE_LLM_MOCK,
   });
@@ -99,7 +103,7 @@ function buildEnvError(err: z.ZodError): Error {
   return new Error(
     `[env.ts] configuración de entorno inválida:\n${issues}\n\n` +
       `OBLIGATORIAS: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.\n` +
-      `Opcionales (por feature): SPORTMONKS_API_TOKEN, SPORTMONKS_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL, NEXT_PUBLIC_SUPABASE_ANON_KEY.\n` +
+      `Opcionales (por feature): SPORTMONKS_API_TOKEN, SPORTMONKS_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL, GEMINI_API_KEY, GEMINI_MODEL, NEXT_PUBLIC_SUPABASE_ANON_KEY.\n` +
       `Copiá .env.example a .env.local y completá los valores requeridos.`,
   );
 }
@@ -133,4 +137,9 @@ export function hasOpenAI(): boolean {
 export function hasSportmonks(): boolean {
   const result = selfHealingParse();
   return result.ok && Boolean(result.value.SPORTMONKS_API_TOKEN);
+}
+
+export function hasGemini(): boolean {
+  const result = selfHealingParse();
+  return result.ok && Boolean(result.value.GEMINI_API_KEY);
 }

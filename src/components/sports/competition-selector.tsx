@@ -23,6 +23,17 @@ export function CompetitionSelector({ sportId, active, candidates }: Props) {
   const [seasonId, setSeasonId] = useState(active?.season.id ?? selectedCandidate?.seasons[0]?.id ?? "");
   const hasMultipleSeasons = (selectedCandidate?.seasons.length ?? 0) > 1;
 
+  const closeSelector = () => {
+    const initialLeagueId = active?.league.id ?? candidates[0]?.league.id ?? "";
+    const initialCandidate = candidates.find((candidate) => candidate.league.id === initialLeagueId);
+    setLeagueId(initialLeagueId);
+    setSeasonId(active?.season.id ?? initialCandidate?.seasons[0]?.id ?? "");
+    if (detailsRef.current) detailsRef.current.open = false;
+    if (window.location.hash === "#competition-selector") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  };
+
   useEffect(() => {
     const openFromHash = () => {
       if (window.location.hash !== "#competition-selector") return;
@@ -43,7 +54,13 @@ export function CompetitionSelector({ sportId, active, candidates }: Props) {
   const isActive = active?.league.id === leagueId && active.season.id === seasonId;
 
   return (
-    <details id="competition-selector" ref={detailsRef} className="comp-selector">
+    <details id="competition-selector" ref={detailsRef} className="comp-selector" onKeyDown={(event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelector();
+        detailsRef.current?.querySelector("summary")?.focus();
+      }
+    }}>
       <summary className="comp-selector-trigger">
         <svg className="comp-selector-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10" />
@@ -52,7 +69,10 @@ export function CompetitionSelector({ sportId, active, candidates }: Props) {
         Competición y temporada
       </summary>
       <div className="comp-selector-panel">
-        <p className="comp-selector-hint">Elegí una competición y la temporada con equipos y partidos disponibles.</p>
+        <div className="comp-selector-panel-head">
+          <p className="comp-selector-hint">Elegí una competición y la temporada con equipos y partidos disponibles.</p>
+          <button type="button" className="comp-selector-close" onClick={closeSelector} aria-label="Cerrar selector de competición">Cerrar ×</button>
+        </div>
         {candidates.length === 0 ? (
           <p className="comp-selector-empty">No hay competiciones disponibles todavía.</p>
         ) : (
@@ -101,6 +121,7 @@ export function CompetitionSelector({ sportId, active, candidates }: Props) {
               <span className="comp-selector-status">
                 {isActive ? "Seleccionada" : ""}
               </span>
+              <button type="button" className="comp-selector-cancel" onClick={closeSelector}>Cancelar</button>
               <button
                 type="submit"
                 disabled={isPending || !leagueId || !seasonId || isActive}

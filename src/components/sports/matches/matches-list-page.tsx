@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Container, Stack } from "@/components/ui/container";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
-import { getMatchesByLeagueSeason, getMatchesByLeagueSeasonDateRange, getMatchesByLeagueSeasonStatuses } from "@/lib/db/repositories/matches-repo";
+import { getMatchesByLeagueSeason, getMatchesByLeagueSeasonDateRange, getMatchesByLeagueSeasonStatuses, getUpcomingMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";
 import { getTeamsByIds } from "@/lib/db/repositories/teams-repo";
 import { ensureDbReady } from "@/lib/db/client";
 import { matchDetailHref } from "@/lib/navigation/match-detail-href";
@@ -51,7 +51,7 @@ export default async function MatchesListPage({ sport, view: rawView, week: rawW
     : view === "today"
       ? await getMatchesByLeagueSeasonDateRange(league.id, seasonId, today.start.toISOString(), today.end.toISOString())
       : view === "upcoming"
-        ? await getMatchesByLeagueSeasonStatuses(league.id, seasonId, ["scheduled", "in_progress"])
+        ? await getUpcomingMatchesByLeagueSeason(league.id, seasonId, Date.now())
         : view === "finished"
           ? await getMatchesByLeagueSeasonStatuses(league.id, seasonId, ["finished"])
           : await getMatchesByLeagueSeason(league.id, seasonId);

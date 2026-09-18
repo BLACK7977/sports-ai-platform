@@ -1,3 +1,5 @@
+import { probabilityPercentages } from "@/lib/presentation/probability";
+
 export function StandingsBars({
   data,
 }: {
@@ -139,25 +141,25 @@ export function MatchProbabilityBar({
   homeLabel: string;
   awayLabel: string;
 }) {
-  const total = Math.max(1, homeProb + drawProb + awayProb);
-  const homePct = (homeProb / total) * 100;
-  const drawPct = (drawProb / total) * 100;
-  const awayPct = (awayProb / total) * 100;
+  const percentages = probabilityPercentages({ home: homeProb, draw: drawProb, away: awayProb });
+  const homePct = percentages.home;
+  const drawPct = percentages.draw;
+  const awayPct = percentages.away;
 
   return (
     <div className="match-prob-wrap space-y-2.5">
       <div className="grid grid-cols-3 text-center font-mono">
         <div className="text-left">
           <div className="text-xs text-slate-400 truncate">{homeLabel}</div>
-          <div className="text-lg font-bold text-cyan-400 tabular-nums">{Math.round(homeProb)}%</div>
+          <div className="text-lg font-bold text-cyan-400 tabular-nums">{homePct}%</div>
         </div>
         <div>
           <div className="text-xs text-slate-400">Empate</div>
-          <div className="text-lg font-bold text-slate-300 tabular-nums">{Math.round(drawProb)}%</div>
+          <div className="text-lg font-bold text-slate-300 tabular-nums">{drawPct}%</div>
         </div>
         <div className="text-right">
           <div className="text-xs text-slate-400 truncate">{awayLabel}</div>
-          <div className="text-lg font-bold text-sky-400 tabular-nums">{Math.round(awayProb)}%</div>
+          <div className="text-lg font-bold text-sky-400 tabular-nums">{awayPct}%</div>
         </div>
       </div>
 
@@ -165,17 +167,17 @@ export function MatchProbabilityBar({
         <div
           className="h-full bg-cyan-400 rounded-l-full transition-all duration-300"
           style={{ width: `${homePct}%` }}
-          title={`${homeLabel}: ${Math.round(homeProb)}%`}
+          title={`${homeLabel}: ${homePct}%`}
         />
         <div
           className="h-full bg-slate-500 transition-all duration-300"
           style={{ width: `${drawPct}%` }}
-          title={`Empate: ${Math.round(drawProb)}%`}
+          title={`Empate: ${drawPct}%`}
         />
         <div
           className="h-full bg-sky-400 rounded-r-full transition-all duration-300"
           style={{ width: `${awayPct}%` }}
-          title={`${awayLabel}: ${Math.round(awayProb)}%`}
+          title={`${awayLabel}: ${awayPct}%`}
         />
       </div>
     </div>

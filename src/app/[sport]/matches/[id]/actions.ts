@@ -12,15 +12,23 @@ import {
 } from "@/lib/ai/rate-limiter";
 import { AiFeatureUnavailableError } from "@/lib/ai/ai-guard";
 import type { SportId } from "@/types/core/sport";
+import {
+  runGenerateUpcomingPrediction,
+  runGenerateProbableLineup,
+  runGeneratePredictionExplanation,
+  GENERIC_ERROR,
+  RATE_LIMIT_ERROR,
+} from "@/lib/services/match-generation-actions";
 
-const GENERIC_ERROR =
-  "No se pudo generar el análisis. Intentá de nuevo en unos segundos.";
+export type {
+  GeneratedUpcomingPrediction,
+  UpcomingPredictionActionResult,
+  ProbableLineupActionResult,
+  PredictionExplanationActionResult,
+} from "@/lib/services/match-generation-actions";
 
 const UNAVAILABLE_ERROR =
   "La funcionalidad de IA no está disponible en este momento. Intentá de nuevo más tarde.";
-
-const RATE_LIMIT_ERROR =
-  "Demasiadas solicitudes. Esperá unos segundos antes de intentar de nuevo.";
 
 // Las páginas ya NO generan AI en el render del servidor: la AI se
 // solicita on-demand desde componentes client mediante estas Server
@@ -102,4 +110,45 @@ export async function actionPredictMatch(
     console.warn(`[action] actionPredictMatch failed (${sportId}/${matchId})`, err);
     return { ok: false as const, error: GENERIC_ERROR };
   }
+}
+
+/**
+ * Thin Server Action wrapper. Authorization (authenticated user required),
+ * rate limit, eligibility, generation and persistence all live in the
+ * testable core, which enforces the strict order:
+ * auth → rate limit → eligibility → generation → persistence.
+ * The public signature stays unchanged so a caller cannot inject deps.
+ */
+export async function actionGenerateUpcomingPrediction(
+  sportId: SportId,
+  matchId: string,
+) {
+  const h = await headers();
+  return runGenerateUpcomingPrediction(sportId, matchId, { clientKey: getClientIp(h) });
+}
+
+/**
+ * Thin Server Action wrapper. Authorization (authenticated user required),
+ * rate limit, official/future/evidence eligibility, deterministic generation
+ * and immutable persistence live in the testable core.
+ */
+export async function actionGenerateProbableLineup(
+  sportId: SportId,
+  matchId: string,
+) {
+  const h = await headers();
+  return runGenerateProbableLineup(sportId, matchId, { clientKey: getClientIp(h) });
+}
+
+/**
+ * Thin Server Action wrapper. PRO-only authorization, rate limit, eligibility,
+ * reuse-before-generate and persistence live in the testable core. The PRO
+ * presentation is only produced after the server-side entitlement check.
+ */
+export async function actionGeneratePredictionExplanation(
+  sportId: SportId,
+  matchId: string,
+) {
+  const h = await headers();
+  return runGeneratePredictionExplanation(sportId, matchId, { clientKey: getClientIp(h) });
 }

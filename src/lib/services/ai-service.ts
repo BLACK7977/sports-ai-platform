@@ -1,5 +1,6 @@
 import "server-only";
 import type { SportId } from "@/types/core/sport";
+import { probabilityPercentages } from "@/lib/presentation/probability";
 import type {
   ChatMessage,
   ChatOptions,
@@ -407,9 +408,10 @@ export async function predictMatch(
   const lookup = deps?.lookupCanonical ?? getCanonicalPredictionForMatch;
   const canonical = await lookup(matchId);
   if (canonical) {
-    const hp = Math.round(canonical.probabilities.home * 100);
-    const dp = Math.round(canonical.probabilities.draw * 100);
-    const ap = 100 - hp - dp;
+    const pcts = probabilityPercentages(canonical.probabilities);
+    const hp = pcts.home;
+    const dp = pcts.draw;
+    const ap = pcts.away;
     const xgHome = canonical.expectedGoals?.home ?? 0;
     const xgAway = canonical.expectedGoals?.away ?? 0;
     return {
@@ -419,7 +421,7 @@ export async function predictMatch(
       predictedAwayScore: Math.round(xgAway),
       homeWinProbability: hp,
       drawProbability: dp,
-      awayWinProbability: Math.max(0, ap),
+      awayWinProbability: ap,
       explanation: `Pronóstico del modelo ${canonical.modelVersion} (experimental).`,
       expectedGoals: canonical.expectedGoals ?? undefined,
       modelVersion: canonical.modelVersion,

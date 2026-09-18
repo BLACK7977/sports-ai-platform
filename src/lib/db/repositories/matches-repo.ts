@@ -125,6 +125,33 @@ export async function getMatchesByLeagueSeasonStatuses(
   return data;
 }
 
+export function isFutureScheduledMatch(match: Pick<Match, "status" | "match_date">, nowMs: number): boolean {
+  const kickoffMs = Date.parse(match.match_date);
+  return match.status === "scheduled" && Number.isFinite(kickoffMs) && kickoffMs > nowMs;
+}
+
+export async function getUpcomingMatchesByLeagueSeason(
+  leagueId: string,
+  seasonId: string,
+  nowMs: number,
+  horizonMs?: number,
+  limit?: number,
+): Promise<Match[]> {
+  const db = await ensureDbReady();
+  let query = db.from<Match>("matches")
+    .eq("league_id", leagueId)
+    .eq("season_id", seasonId)
+    .eq("status", "scheduled")
+    .gte("match_date", new Date(nowMs + 1).toISOString());
+  if (horizonMs !== undefined) query = query.lte("match_date", new Date(nowMs + horizonMs).toISOString());
+  const { data, error } = await query.order("match_date", "asc").select();
+  if (error) throw error;
+  const stable = data
+    .filter((match) => isFutureScheduledMatch(match, nowMs))
+    .sort((a, b) => a.match_date.localeCompare(b.match_date) || a.id.localeCompare(b.id));
+  return limit === undefined ? stable : stable.slice(0, limit);
+}
+
 export async function getMatchesByTeamId(teamId: string): Promise<Match[]> {
   const db = await ensureDbReady();
   const { data } = await db

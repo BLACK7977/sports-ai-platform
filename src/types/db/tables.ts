@@ -162,6 +162,34 @@ export interface PredictionEvaluation {
   evaluation_version: number;
 }
 
+/** Fila de prediction_explanations (migration 014). Append-only. */
+export interface PredictionExplanation {
+  id: number;
+  prediction_id: number;
+  provider: string;
+  model_name: string;
+  prompt_schema: string;
+  prompt_version: number;
+  language: string;
+  payload: Jsonb | null;
+  status: "generated" | "failed";
+  input_fingerprint: string | null;
+  error_class: string | null;
+  generated_at: string;
+}
+export type PredictionExplanationInsert = {
+  prediction_id: number;
+  provider: string;
+  model_name: string;
+  prompt_schema: string;
+  prompt_version: number;
+  language: string;
+  payload: Jsonb | null;
+  status: "generated" | "failed";
+  input_fingerprint?: string | null;
+  error_class?: string | null;
+};
+
 // ============================================================================
 // Match Enrichment (migration 008)
 // ============================================================================
@@ -256,3 +284,38 @@ export interface MatchLineup {
 }
 export type MatchLineupInsert = Partial<Pick<MatchLineup, "id" | "created_at" | "updated_at">> &
   Omit<MatchLineup, "id" | "created_at" | "updated_at">;
+
+// ============================================================================
+// Probable Lineup (migration 012) — SPORTS AI predictive storage.
+// Immutable/canonical. Never mixed with official match_lineups.
+// ============================================================================
+
+export interface ProbableLineupRun {
+  id: string;
+  match_id: string;
+  team_id: string;
+  model_version: string;
+  generated_at: string;
+  input_cutoff_at: string;
+  formation: string;
+  evidence_coverage: number;
+  status: "AVAILABLE" | "NOT_AVAILABLE" | "FAILED";
+  created_at: string;
+}
+export type ProbableLineupRunInsert = Omit<ProbableLineupRun, "created_at"> & {
+  created_at?: string;
+};
+
+export interface ProbableLineupPlayer {
+  id: string;
+  run_id: string;
+  player_id: string | null;
+  player_name: string;
+  formation_field: string;
+  evidence_score: number;
+  deterministic_order: number;
+  created_at: string;
+}
+export type ProbableLineupPlayerInsert = Omit<ProbableLineupPlayer, "created_at"> & {
+  created_at?: string;
+};

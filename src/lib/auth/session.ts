@@ -125,6 +125,33 @@ export async function requirePremium(client?: SessionAuthClient): Promise<{ user
   return { user, profile: result.profile };
 }
 
+// ── Server Action authorization (reuses the same session/profile logic) ──
+
+/** Resultado de autorización de una Server Action. */
+export type ActionAccess =
+  | { status: "anonymous" }
+  | { status: "authenticated"; role: UserRole; user: SessionUser };
+
+/**
+ * Autoriza una Server Action. Reutiliza exactamente la misma cadena que el
+ * render (getCurrentUser → getCurrentProfile → resolvePremiumAccess); no crea
+ * un segundo sistema de autorización. Fail-closed:
+ *   - sin sesión / auth no configurada → anonymous
+ *   - perfil missing/error             → authenticated con rol "free"
+ * El rol se lee SIEMPRE server-side desde profiles; jamás de argumentos,
+ * cookies manipulables ni metadata editable por el cliente.
+ */
+export async function resolveActionAccess(client?: SessionAuthClient): Promise<ActionAccess> {
+  const user = await getCurrentUser(client);
+  if (!user) return { status: "anonymous" };
+  const profile = await getCurrentProfile(user.id, client);
+  return {
+    status: "authenticated",
+    role: resolvePremiumAccess(profile).allowed ? "premium" : "free",
+    user,
+  };
+}
+
 // ── Pure helpers (reused by header, premium gate, tests) ──
 
 /** Resuelve el plan visible en el header desde un ProfileResult. */
