@@ -431,6 +431,58 @@ async function runTests(): Promise<void> {
     check("E7: core enforces auth before rate limit (source order)", authIdx > -1 && rateIdx > authIdx, `auth=${authIdx} rate=${rateIdx}`);
   }
 
+  // ── F. Legacy AI actions now auth-gated (closed beta: anonymous denied) ──
+  console.log("\n--- F. actionAnalyzeMatch / actionPredictMatch / actionGeneratePlayerReport (anonymous denied) ---");
+  {
+    const cwd = process.cwd();
+    const matchActions = fs.readFileSync(`${cwd}/src/app/[sport]/matches/[id]/actions.ts`, "utf8");
+    const playerActions = fs.readFileSync(`${cwd}/src/app/[sport]/players/[id]/actions.ts`, "utf8");
+    const sessionSrc = fs.readFileSync(`${cwd}/src/lib/auth/session.ts`, "utf8");
+    const shared = fs.readFileSync(`${cwd}/src/lib/services/match-generation-actions.ts`, "utf8");
+
+    // The correct gate primitive (server-side, ignores client-supplied role/plan) is used.
+    check("F1: analyze action uses server-side resolveActionAccess", matchActions.includes("resolveActionAccess"));
+    check("F2: predict action uses server-side resolveActionAccess", matchActions.includes("resolveActionAccess"));
+    check("F3: player-report action uses server-side resolveActionAccess", playerActions.includes("resolveActionAccess"));
+
+    // Auth precedes rate-limit consumption (same invariant as the protected core).
+    const fAnalyzeAuth = matchActions.indexOf("resolveActionAccess");
+    const fAnalyzeRate = matchActions.indexOf('checkAiRateLimit("match-analysis"');
+    check("F4: analyze gates auth BEFORE rate limit", fAnalyzeAuth > -1 && fAnalyzeRate > fAnalyzeAuth, `auth=${fAnalyzeAuth} rate=${fAnalyzeRate}`);
+    const fPredictAuth = matchActions.indexOf("resolveActionAccess");
+    const fPredictRate = matchActions.indexOf('checkAiRateLimit("match-prediction"');
+    check("F5: predict gates auth BEFORE rate limit", fPredictAuth > -1 && fPredictRate > fPredictAuth, `auth=${fPredictAuth} rate=${fPredictRate}`);
+    const fReportAuth = playerActions.indexOf("resolveActionAccess");
+    const fReportRate = playerActions.indexOf('checkAiRateLimit("player-report"');
+    check("F6: player-report gates auth BEFORE rate limit", fReportAuth > -1 && fReportRate > fReportAuth, `auth=${fReportAuth} rate=${fReportRate}`);
+
+    // Anonymous denial happens BEFORE the LLM service call (0 provider calls by construction).
+    const fAnalyzeDenyBeforeService = matchActions.indexOf("if (access.status === \"anonymous\")") < matchActions.indexOf("generateMatchAnalysis(");
+    check("F7: analyze denies anonymous before reaching the LLM service", fAnalyzeDenyBeforeService);
+    const fPredictDenyBeforeService = matchActions.indexOf("if (access.status === \"anonymous\")") < matchActions.indexOf("await predictMatch(");
+    check("F8: predict denies anonymous before reaching the LLM service", fPredictDenyBeforeService);
+    const fReportDenyBeforeService = playerActions.indexOf("if (access.status === \"anonymous\")") < playerActions.indexOf("generatePlayerReport(");
+    check("F9: player-report denies anonymous before reaching the LLM service", fReportDenyBeforeService);
+
+    // The denied path returns ONLY the shared sanitized message (no code/data/model leaks).
+    check("F10: deny shape is { ok:false, error } with shared AUTH_REQUIRED_ERROR message",
+      matchActions.includes(`error: AUTH_REQUIRED_ERROR`) &&
+      playerActions.includes(`error: AUTH_REQUIRED_ERROR`));
+    check("F11: AUTH_REQUIRED_ERROR is the same sanitized string used by protected actions",
+      shared.includes(`AUTH_REQUIRED_ERROR = "Iniciá sesión para continuar."`) &&
+      /error:\s*AUTH_REQUIRED_ERROR/.test(matchActions) &&
+      /error:\s*AUTH_REQUIRED_ERROR/.test(playerActions));
+
+    // The gate never consults client-supplied role/plan (only profiles.role via getCurrentProfile).
+    check("F12: gate helper ignores client role/plan (only profiles-based)",
+      sessionSrc.includes("getCurrentUser") && sessionSrc.includes("getCurrentProfile"));
+    const noPlanParam =
+      !/function actionAnalyzeMatch\([^)]*(role|plan)/.test(matchActions) &&
+      !/function actionPredictMatch\([^)]*(role|plan)/.test(matchActions) &&
+      !/function actionGeneratePlayerReport\([^)]*(role|plan)/.test(playerActions);
+    check("F13: neither action accepts a role/plan argument", noPlanParam);
+  }
+
   console.log("\n======================================================================");
   console.log(`Server Action authorization smoke: ${passed} passed, ${failed} failed`);
   console.log("======================================================================");

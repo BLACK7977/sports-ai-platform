@@ -12,7 +12,13 @@ export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/?rest\/v1\/?$/, "").replace(/\/$/, "");
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return response;
+  const isProd = process.env.NODE_ENV === "production";
   const supabase = createServerClient(url, anonKey, {
+    cookieOptions: {
+      sameSite: "lax",
+      httpOnly: true,
+      secure: isProd,
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();

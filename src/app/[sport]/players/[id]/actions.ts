@@ -11,6 +11,8 @@ import {
   AiRateLimitExceededError,
 } from "@/lib/ai/rate-limiter";
 import { AiFeatureUnavailableError } from "@/lib/ai/ai-guard";
+import { resolveActionAccess } from "@/lib/auth/session";
+import { AUTH_REQUIRED_ERROR } from "@/lib/services/match-generation-actions";
 import type { SportId } from "@/types/core/sport";
 
 const GENERIC_ERROR =
@@ -40,6 +42,10 @@ export async function actionGeneratePlayerReport(
       ok: false as const,
       error: "sportId, leagueId, seasonId y playerId requeridos.",
     };
+  }
+  const access = await resolveActionAccess();
+  if (access.status === "anonymous") {
+    return { ok: false as const, error: AUTH_REQUIRED_ERROR };
   }
   const h = await headers();
   const clientKey = getClientIp(h);

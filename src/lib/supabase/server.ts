@@ -21,7 +21,13 @@ export async function createSupabaseServerClient() {
   const projectUrl = getSupabaseProjectUrl();
   if (!anonKey || !projectUrl) throw new AuthConfigError();
   const cookieStore = await cookies();
+  const isProd = process.env.NODE_ENV === "production";
   return createServerClient(projectUrl, anonKey, {
+    cookieOptions: {
+      sameSite: "lax",
+      httpOnly: true,
+      secure: isProd,
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();

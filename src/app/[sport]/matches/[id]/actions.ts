@@ -18,7 +18,9 @@ import {
   runGeneratePredictionExplanation,
   GENERIC_ERROR,
   RATE_LIMIT_ERROR,
+  AUTH_REQUIRED_ERROR,
 } from "@/lib/services/match-generation-actions";
+import { resolveActionAccess } from "@/lib/auth/session";
 
 export type {
   GeneratedUpcomingPrediction,
@@ -42,6 +44,10 @@ export async function actionAnalyzeMatch(
       ok: false as const,
       error: "sportId y matchId son requeridos.",
     };
+  }
+  const access = await resolveActionAccess();
+  if (access.status === "anonymous") {
+    return { ok: false as const, error: AUTH_REQUIRED_ERROR };
   }
   const h = await headers();
   const clientKey = getClientIp(h);
@@ -83,6 +89,10 @@ export async function actionPredictMatch(
     !parseEntityId(matchId)
   ) {
     return { ok: false as const, error: "Parámetros incompletos." };
+  }
+  const access = await resolveActionAccess();
+  if (access.status === "anonymous") {
+    return { ok: false as const, error: AUTH_REQUIRED_ERROR };
   }
   const h = await headers();
   const clientKey = getClientIp(h);

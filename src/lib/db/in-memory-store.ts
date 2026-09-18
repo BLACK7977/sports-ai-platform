@@ -70,9 +70,72 @@ const TABLE_NAMES: TableName[] = [
 
 type OrderDir = "asc" | "desc";
 
+type OrOp = "eq" | "neq" | "gt" | "gte" | "lt" | "lte";
+type OrCondition =
+  | { kind: "and"; conditions: OrCondition[] }
+  | { kind: "single"; column: string; op: OrOp; want: string };
+
+/** Splits a PostgREST OR filter at top-level commas (ignores commas inside
+ *  `and(...)` groups). */
+function splitOrTopLevel(input: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (const ch of input) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.trim()) parts.push(cur);
+  return parts;
+}
+
+function parseOrCondition(token: string): OrCondition | null {
+  const t = token.trim();
+  if (t.startsWith("and(") && t.endsWith(")")) {
+    const inner = t.slice(4, -1);
+    const conditions = splitOrTopLevel(inner)
+      .map(parseOrCondition)
+      .filter((c): c is OrCondition => c !== null);
+    return { kind: "and", conditions };
+  }
+  const match = /^([A-Za-z_][A-Za-z0-9_]*)\.(eq|neq|gt|gte|lt|lte)\.(.*)$/.exec(t);
+  if (!match) return null;
+  const [, column, op, rawWant] = match;
+  const want = rawWant.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+  return { kind: "single", column, op: op as OrOp, want };
+}
+
+function evalOrCondition(cond: OrCondition, row: Record<string, unknown>): boolean {
+  if (cond.kind === "and") return cond.conditions.every((c) => evalOrCondition(c, row));
+  const actual = row[cond.column];
+  if (cond.op === "eq") return String(actual) === cond.want;
+  if (cond.op === "neq") return String(actual) !== cond.want;
+  if (actual === undefined || actual === null) return false;
+  const a = Number(actual);
+  const b = Number(cond.want);
+  if (Number.isFinite(a) && Number.isFinite(b)) {
+    return cond.op === "gt" ? a > b : cond.op === "gte" ? a >= b : cond.op === "lt" ? a < b : a <= b;
+  }
+  const sa = String(actual);
+  return cond.op === "gt" ? sa > cond.want : cond.op === "gte" ? sa >= cond.want : cond.op === "lt" ? sa < cond.want : sa <= cond.want;
+}
+
+function matchesOr<T>(row: T, filter: string): boolean {
+  return splitOrTopLevel(filter)
+    .map(parseOrCondition)
+    .some((cond) => cond !== null && evalOrCondition(cond, row as unknown as Record<string, unknown>));
+}
+
 export interface QueryBuilder<T> {
   eq<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   in<K extends keyof T>(key: K, values: T[K][]): QueryBuilder<T>;
+  or(filter: string): QueryBuilder<T>;
   gte<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   lte<K extends keyof T>(key: K, value: T[K]): QueryBuilder<T>;
   order<K extends keyof T>(key: K, dir?: OrderDir): QueryBuilder<T>;
@@ -154,6 +217,10 @@ class InMemoryStoreImpl {
       },
       in: (k, vs) => {
         filters.push((r) => vs.includes(r[k]));
+        return builder;
+      },
+      or: (filter) => {
+        filters.push((r) => matchesOr(r, filter));
         return builder;
       },
       gte: (k, v) => {
