@@ -1,25 +1,13 @@
 import Link from "next/link";
 import { Card, CardBody, CardHeader, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Container, Stack, Row } from "@/components/ui/container";
+import { Container, Stack } from "@/components/ui/container";
 import { DataTable, TableHead, Th, TableBody, Tr, Td, EmptyRow } from "@/components/ui/table";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { TeamCrest } from "@/components/sports/teams/team-crest";
 import { CompetitionNav } from "@/components/sports/competition-nav";
 import { getCompetitionTabs } from "@/shared/competition-tabs";
 import type { Player, Team } from "@/types/db/tables";
-
-function jerseyColor(teamId: string) {
-  const colors = [["bg-indigo-500", "text-white"], ["bg-emerald-500", "text-white"], ["bg-rose-500", "text-white"], ["bg-amber-500", "text-white"], ["bg-sky-500", "text-white"], ["bg-violet-500", "text-white"]];
-  let hash = 0;
-  for (let index = 0; index < teamId.length; index++) hash = (hash * 31 + teamId.charCodeAt(index)) >>> 0;
-  return colors[hash % colors.length];
-}
-
-function shortInitials(name: string) {
-  const parts = name.trim().split(/\s+/);
-  return parts.length === 1 ? parts[0].slice(0, 2).toUpperCase() : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 function positionTone(position: string) {
   if (["GK", "Arquero", "Portero"].includes(position)) return "warning" as const;
@@ -42,7 +30,6 @@ export default function PlayersListPage({ sport, leagueName, teams, selectedTeam
   const sportName = has?.sport.displayName ?? "Deporte";
   const goalkeepers = players.filter((player) => isGoalkeeper(player.position)).length;
   const forwards = players.filter((player) => isForward(player.position)).length;
-  const [jerseyBackground, jerseyText] = jerseyColor(selectedTeam?.id ?? "team");
   const tabs = getCompetitionTabs(sport);
 
   return <Container size="wide" className="product-page players-page"><Stack gap="lg">
@@ -54,6 +41,6 @@ export default function PlayersListPage({ sport, leagueName, teams, selectedTeam
 
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4"><Card className="product-stat"><CardBody><div className="text-xs text-slate-500">Equipos de la competición</div><div className="text-3xl font-bold">{teams.length}</div><div className="mt-2 text-xs text-slate-500">Plantel bajo demanda</div></CardBody></Card><Card className="product-stat product-stat-assists"><CardBody><div className="text-xs text-slate-500">Jugadores del plantel</div><div className="text-3xl font-bold">{players.length}</div><div className="mt-2 text-xs font-medium text-emerald-600">{selectedTeam?.short_name ?? selectedTeam?.name ?? "Sin selección"}</div></CardBody></Card><Card className="product-stat product-stat-discipline"><CardBody><div className="text-xs text-slate-500">Arqueros</div><div className="text-3xl font-bold">{goalkeepers}</div><div className="mt-2 text-xs text-slate-500">Posición GK</div></CardBody></Card><Card className="product-stat"><CardBody><div className="text-xs text-slate-500">Delanteros</div><div className="text-3xl font-bold">{forwards}</div><div className="mt-2 text-xs text-slate-500">Plantel seleccionado</div></CardBody></Card></div>
 
-    <Card className="product-panel"><CardHeader action={selectedTeam ? <Badge tone="neutral">{players.length} jugadores</Badge> : undefined}><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-xl font-bold ${jerseyBackground} ${jerseyText}`}>{shortInitials(selectedTeam?.short_name ?? selectedTeam?.name ?? "—")}</div><div><CardTitle>{selectedTeam?.name ?? "Elegí un equipo"}</CardTitle><CardSubtitle>{selectedTeam ? `Plantilla ${selectedTeam.short_name ?? selectedTeam.name}` : "Seleccioná un equipo para cargar su plantel."}</CardSubtitle></div></div></CardHeader><CardBody className="!p-0">{!selectedTeam ? <EmptyRow message="No hay equipos disponibles en esta competición." cols={6} /> : players.length === 0 ? <EmptyRow message="Sin jugadores en esta plantilla." cols={6} /> : <DataTable><TableHead><Th className="w-12">#</Th><Th>Jugador</Th><Th>Posición</Th><Th>Nacionalidad</Th><Th>Detalles</Th><Th className="w-20" /></TableHead><TableBody>{players.map((player) => <Tr key={player.id} hoverable className="cursor-pointer"><Td className="font-semibold tabular-nums text-slate-500">{player.jersey_number ?? "—"}</Td><Td><Link href={`/${sport}/players/${player.id}`} className="font-medium text-slate-800 hover:underline dark:text-slate-100">{player.full_name}</Link></Td><Td><Badge tone={positionTone(player.position)}>{player.position}</Badge></Td><Td className="text-slate-600 dark:text-slate-300">{player.nationality ?? "—"}</Td><Td className="text-sm text-slate-500">{player.short_name ?? player.position}</Td><Td className="text-right"><Link href={`/${sport}/players/${player.id}`} className="text-xs text-cyan-400 hover:underline">Ver →</Link></Td></Tr>)}</TableBody></DataTable>}</CardBody></Card>
+    <Card className="product-panel"><CardHeader action={selectedTeam ? <Badge tone="neutral">{players.length} jugadores</Badge> : undefined}><div className="flex items-center gap-3">{selectedTeam ? <TeamCrest name={selectedTeam.name} shortName={selectedTeam.short_name} logoUrl={selectedTeam.logo_url} size="md" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-cyan-200/20 bg-slate-900/90 font-semibold text-cyan-100">?</span>}<div><CardTitle>{selectedTeam?.name ?? "Elegí un equipo"}</CardTitle><CardSubtitle>{selectedTeam ? `Plantilla ${selectedTeam.short_name ?? selectedTeam.name}` : "Seleccioná un equipo para cargar su plantel."}</CardSubtitle></div></div></CardHeader><CardBody className="!p-0">{!selectedTeam ? <EmptyRow message="No hay equipos disponibles en esta competición." cols={6} /> : players.length === 0 ? <EmptyRow message="Sin jugadores en esta plantilla." cols={6} /> : <DataTable><TableHead><Th className="w-12">#</Th><Th>Jugador</Th><Th>Posición</Th><Th>Nacionalidad</Th><Th>Detalles</Th><Th className="w-20" /></TableHead><TableBody>{players.map((player) => <Tr key={player.id} hoverable className="cursor-pointer"><Td className="font-semibold tabular-nums text-slate-500">{player.jersey_number ?? "—"}</Td><Td><Link href={`/${sport}/players/${player.id}`} className="font-medium text-slate-800 hover:underline dark:text-slate-100">{player.full_name}</Link></Td><Td><Badge tone={positionTone(player.position)}>{player.position}</Badge></Td><Td className="text-slate-600 dark:text-slate-300">{player.nationality ?? "—"}</Td><Td className="text-sm text-slate-500">{player.short_name ?? player.position}</Td><Td className="text-right"><Link href={`/${sport}/players/${player.id}`} className="text-xs text-cyan-400 hover:underline">Ver →</Link></Td></Tr>)}</TableBody></DataTable>}</CardBody></Card>
   </Stack></Container>;
 }

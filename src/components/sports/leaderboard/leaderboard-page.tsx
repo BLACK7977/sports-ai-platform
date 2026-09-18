@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Container, Stack, Row } from "@/components/ui/container";
+import { Container, Stack } from "@/components/ui/container";
 import { MiniGauge, StandingsBars } from "@/components/charts/svg-charts";
 import { getHasSport } from "@/components/sports/sport-helpers";
 import { CompetitionNav } from "@/components/sports/competition-nav";
@@ -19,8 +18,8 @@ function PlayerMark({ row, rank = 10 }: { row: RankRow; rank?: number }) {
   return <span className={`player-stamp player-stamp-${rankTone(rank)}`} aria-hidden>{initials(row.fullName)}</span>;
 }
 
-export default async function LeaderboardPage({ sport, leagueName, seasonName, squadRanking, topN = 15, chart = "goals" }: {
-  sport: string; leagueName: string; seasonName: string; squadRanking: RankRow[]; topN?: number; chart?: Metric;
+export default async function LeaderboardPage({ sport, leagueName, seasonName, squadRanking, topN = 15, chart = "goals", aggregate }: {
+  sport: string; leagueName: string; seasonName: string; squadRanking: RankRow[]; topN?: number; chart?: Metric; aggregate?: { played: number; finished: number; totalGoals: number; averageGoals: number | null };
 }) {
   const has = getHasSport(sport);
   const sportName = has?.sport.displayName ?? "Deporte";
@@ -60,8 +59,14 @@ export default async function LeaderboardPage({ sport, leagueName, seasonName, s
           <div><span>IMPACTO</span><strong>{squadRanking.reduce((sum, row) => sum + impact(row), 0)}</strong><small>acciones de gol</small></div>
         </section> : <section className="leaderboard-empty-state" aria-labelledby="leaderboard-empty-title">
           <span>ESTADÍSTICAS INDIVIDUALES</span>
-          <h2 id="leaderboard-empty-title">Las estadísticas estarán disponibles al completar la sincronización.</h2>
-          <p>Esta competición ya tiene sus equipos y partidos disponibles. Los goles, asistencias, minutos y demás métricas de cada jugador aparecerán cuando se sincronicen las estadísticas individuales por partido.</p>
+          <h2 id="leaderboard-empty-title">Las estadísticas por jugador estarán disponibles al completar la sincronización.</h2>
+          <p>La competición ya tiene equipos y partidos publicados. Los goles, asistencias, minutos y demás métricas de cada jugador aparecerán cuando se sincronicen las estadísticas individuales por partido.</p>
+          {aggregate && aggregate.finished > 0 ? <div className="leaderboard-empty-aggregates" aria-label={`Competición: ${aggregate.played} partidos programados, ${aggregate.finished} jugados, ${aggregate.totalGoals} goles`}>
+            <div><span>PARTIDOS CARGADOS</span><strong>{aggregate.played}</strong></div>
+            <div><span>JUGADOS</span><strong>{aggregate.finished}</strong></div>
+            <div><span>GOLES</span><strong>{aggregate.totalGoals}</strong></div>
+            <div><span>PROMEDIO</span><strong>{aggregate.averageGoals ?? "—"}</strong><small>goles por partido</small></div>
+          </div> : null}
         </section>}
 
         {hasIndividualStats ? <><section className="podium-section">

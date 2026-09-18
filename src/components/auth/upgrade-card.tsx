@@ -1,39 +1,38 @@
 import { Card, CardBody, CardHeader, CardTitle, CardSubtitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export function UpgradeCard() {
-  const features = [
-    "Probabilidades completas del modelo Dixon-Coles",
-    "Factores avanzados de análisis",
-    "Insights profundos por partido",
-    "Historial y filtros avanzados",
-    "Herramientas Value/EV (próximamente)",
-  ];
+const features = [
+  "Lectura completa del modelo: resumen, factores clave y lectura técnica",
+  "Probabilidades completas de local, empate y visitante",
+  "Análisis del modelo por partido y predicciones de próximos partidos",
+  "Historial y filtros de predicciones",
+];
 
+export function UpgradeCard() {
   return (
     <Card className="match-panel match-intelligence-module">
       <CardHeader className="match-module-header">
         <CardTitle>
-          <span className="module-kicker">NYVORX PRO</span> Desbloqueá una capa más profunda del análisis
+          <span className="module-kicker">NYVORX PRO</span> Una capa más profunda de Sports Intelligence
         </CardTitle>
-        <CardSubtitle>Upgrade a Pro para acceder a todo el potencial del modelo.</CardSubtitle>
+        <CardSubtitle>Pasate a PRO para desbloquear todo el análisis del modelo NYVORX.</CardSubtitle>
       </CardHeader>
       <CardBody>
         <div className="space-y-4">
           <ul className="upgrade-features">
-            {features.map((f) => (
-              <li key={f}>
+            {features.map((feature) => (
+              <li key={feature}>
                 <span className="upgrade-feature-marker" aria-hidden>▸</span>
-                <span>{f}</span>
+                <span>{feature}</span>
               </li>
             ))}
           </ul>
           <div className="flex items-center gap-3 pt-1">
             <Badge tone="info" className="text-[10px] tracking-wider uppercase">
-              Próximamente
+              Activar PRO — próximamente
             </Badge>
             <span className="text-xs text-slate-500">
-              Disponible en una futura actualización.
+              Aún no existe un sistema de pago integrado. Cuando esté disponible, vas a poder activar PRO desde esta página.
             </span>
           </div>
         </div>

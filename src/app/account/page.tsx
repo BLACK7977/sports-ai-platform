@@ -139,7 +139,7 @@ export default async function AccountPage() {
                   </p>
                 ) : (
                   <p className="mt-1 text-xs text-slate-500">
-                    Actualizate a Pro para desbloquear probabilidades completas, insights avanzados y herramientas Value/EV.
+                    Actualizate a Pro para desbloquear la lectura completa del modelo, factores clave y análisis avanzados de cada partido.
                   </p>
                 )}
               </div>
@@ -147,7 +147,7 @@ export default async function AccountPage() {
               <div className="flex flex-wrap items-center gap-3 border-t border-cyan-100/10 pt-4">
                 {!isPremium ? (
                   <LinkButton href="/soccer/premium-test" tone="primary" size="md">
-                    Conocé PRO
+                    Ver NYVORX PRO
                   </LinkButton>
                 ) : null}
                 <LinkButton href="/" tone="outline" size="md">

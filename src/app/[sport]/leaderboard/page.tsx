@@ -7,8 +7,16 @@ import {
 } from "@/components/sports/sport-helpers";
 import { ensureDbReady } from "@/lib/db/client";
 import { getCompetitionSelectionState } from "@/lib/db/repositories/active-competition-repo";
+import { getMatchesByLeagueSeason } from "@/lib/db/repositories/matches-repo";
 import { getTeamSquadRanking } from "@/lib/services/statistics-service";
 import { parseSportId, chartSchema } from "@/lib/config/validation";
+
+export type CompetitionAggregate = {
+  played: number;
+  finished: number;
+  totalGoals: number;
+  averageGoals: number | null;
+};
 
 export default async function LeaderboardRoute({
   params,
@@ -32,6 +40,18 @@ export default async function LeaderboardRoute({
     mainLeague && seasonId
       ? await getTeamSquadRanking(sport, mainLeague.id, seasonId)
       : [];
+  const seasonMatches = mainLeague && seasonId ? await getMatchesByLeagueSeason(mainLeague.id, seasonId) : [];
+  const finishedMatches = seasonMatches.filter((match) => match.status === "finished");
+  const totalGoals = finishedMatches.reduce(
+    (sum, match) => sum + (match.home_score ?? 0) + (match.away_score ?? 0),
+    0,
+  );
+  const aggregate: CompetitionAggregate = {
+    played: seasonMatches.length,
+    finished: finishedMatches.length,
+    totalGoals,
+    averageGoals: finishedMatches.length > 0 ? Math.round((totalGoals / finishedMatches.length) * 100) / 100 : null,
+  };
   return (
     <LeaderboardPage
       sport={sport}
@@ -42,6 +62,7 @@ export default async function LeaderboardRoute({
       seasonName={active?.season.name ?? formatSeasonName(seasonId)}
       squadRanking={ranking}
       chart={chart}
+      aggregate={aggregate}
     />
   );
 }

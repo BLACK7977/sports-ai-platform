@@ -63,8 +63,15 @@ export default async function PremiumTestRoute({
               <div className="match-empty-state">
                 <p className="text-sm text-slate-300">
                   Acceso completo a las herramientas Premium de NYVORX.
-                  Los análisis del modelo, probabilidades y factores avanzados
-                  estarán disponibles aquí.
+                </p>
+                <ul className="premium-active-list">
+                  <li>Lectura completa de cada predicción (resumen + factores clave + lectura técnica)</li>
+                  <li>Predicciones de próximos partidos y formaciones probables</li>
+                  <li>Historial y filtros de predicciones</li>
+                  <li>Análisis de jugadores y contexto de la competición</li>
+                </ul>
+                <p className="mt-2 text-xs text-slate-500">
+                  Los módulos restantes se activan a medida que se sincronizan los datos de la competición.
                 </p>
               </div>
             </CardBody>
@@ -92,14 +99,45 @@ export default async function PremiumTestRoute({
               Esto es lo que desbloqueás con Pro:
             </h3>
             <PremiumPreview
-              title="Probabilidades del Modelo"
-              description="Dixon-Coles con factores de localía, forma y más."
+              title="Lectura Completa del Modelo"
+              description="Resumen, factores clave y lectura técnica de cada predicción, sin recortes."
             />
             <PremiumPreview
               title="Análisis Profundo"
-              description="Insights detallados por partido y tendencias del modelo."
+              description="Predicciones de próximos partidos, formaciones probables y contexto de la competición."
             />
           </div>
+          <Card className="match-panel">
+            <CardHeader className="match-module-header">
+              <CardTitle>
+                <span className="module-kicker">COMPARATIVA</span> Free vs NYVORX PRO
+              </CardTitle>
+            </CardHeader>
+            <CardBody>
+              <div className="premium-compare">
+                <div className="premium-compare-col">
+                  <strong className="premium-compare-plan">GRATIS</strong>
+                  <ul>
+                    <li>Resumen de la lectura NYVORX</li>
+                    <li>Probabilidades del modelo</li>
+                    <li>Predicciones y análisis por partido</li>
+                    <li>Planteles y formaciones probables</li>
+                  </ul>
+                </div>
+                <div className="premium-compare-col premium-compare-pro">
+                  <strong className="premium-compare-plan">PRO</strong>
+                  <ul>
+                    <li>Lectura completa: factores clave + lectura técnica</li>
+                    <li>Todo lo del plan Free</li>
+                    <li>Historial y filtros de predicciones</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-slate-500">
+                La activación de PRO se habilita cuando esté integrado el sistema de suscripción.
+              </p>
+            </CardBody>
+          </Card>
           <Row className="mt-2">
             <LinkButton href={`/${sport}`} tone="outline" size="md">
               ← Volver a {sport === "soccer" ? "Fútbol" : sport}

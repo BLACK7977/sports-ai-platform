@@ -16,11 +16,38 @@ import { probabilityPercentages } from "@/lib/presentation/probability";
 import type { PredictionExplanationView } from "@/lib/types/prediction-explanation";
 import type { SportId } from "@/types/core/sport";
 
-function generatedDateLabel(value: string): string {
+const MONTHS_ES = [
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
+];
+
+// Formatter for the "generated at" label. It renders the Buenos Aires
+// wall-clock time taken exclusively from Intl time arithmetic
+// (Intl.formatToParts with an explicit timeZone; Argentina has no DST, so it
+// is a permanent -03:00) and never from the ambient locale of a runtime.
+// The label string itself is assembled from those numeric parts with fixed
+// ASCII separators, so the output is byte-identical on the Node server and
+// any browser — ICU es-AR punctuation can differ across runtimes (e.g. the
+// narrow no-break space in "a. m."), which would produce a hydration
+// mismatch. No Date.now(), no suppressHydrationWarning.
+function formatGeneratedDate(value: string): string {
   const date = new Date(value);
-  return Number.isFinite(date.getTime())
-    ? date.toLocaleString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-    : "fecha no disponible";
+  if (!Number.isFinite(date.getTime())) return "fecha no disponible";
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hourCycle: "h23",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  const month = MONTHS_ES[Number(part("month")) - 1] ?? part("month");
+  const day = part("day").padStart(2, "0");
+  const hour = part("hour").padStart(2, "0");
+  const minute = part("minute").padStart(2, "0");
+  return `${day} ${month}, ${hour}:${minute}`;
 }
 
 function ExplanationBlock({
@@ -51,7 +78,7 @@ function ExplanationBlock({
           </div>
           <p>El desglose completo de la lectura está disponible con el plan Pro de NYVORX.</p>
           <LinkButton href={`/${sport}/premium-test`} tone="primary" size="sm" className="match-explanation-pro-cta">
-            Conocé PRO
+            Ver NYVORX PRO
           </LinkButton>
         </div>
       </section>
@@ -144,7 +171,7 @@ export default function MatchPredictionPanel({
                 Goles esperados (xG) <strong>{prediction.expectedGoals.home.toFixed(2)} — {prediction.expectedGoals.away.toFixed(2)}</strong>
               </p>
             ) : null}
-            <p className="match-prediction-meta">Predicción generada {generatedDateLabel(prediction.predictedAt)}</p>
+            <p className="match-prediction-meta">Predicción generada {formatGeneratedDate(prediction.predictedAt)}</p>
           </div>
             <ExplanationBlock sport={sport} explanation={explanation ?? null} />
           </>
