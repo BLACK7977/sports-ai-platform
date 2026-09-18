@@ -177,7 +177,7 @@ export default function PredictionsHistoryPage({
             </Row>
             <h1 className="page-title">Historial de predicciones</h1>
             <p className="text-slate-500 max-w-2xl">
-              SPORTS AI genera probabilidades, no garantías. Las predicciones se
+              NYVORX genera probabilidades, no garantías. Las predicciones se
               guardan antes del inicio del partido y no se modifican después.
             </p>
           </div>

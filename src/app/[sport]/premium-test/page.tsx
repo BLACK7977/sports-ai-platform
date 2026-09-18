@@ -62,7 +62,7 @@ export default async function PremiumTestRoute({
             <CardBody>
               <div className="match-empty-state">
                 <p className="text-sm text-slate-300">
-                  Acceso completo a las herramientas Premium de Sports AI.
+                  Acceso completo a las herramientas Premium de NYVORX.
                   Los análisis del modelo, probabilidades y factores avanzados
                   estarán disponibles aquí.
                 </p>

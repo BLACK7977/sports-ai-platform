@@ -71,7 +71,7 @@ export const RATE_LIMIT_ERROR =
 export const AUTH_REQUIRED_ERROR = "Iniciá sesión para continuar.";
 
 export const PRO_REQUIRED_ERROR =
-  "Esta función está disponible con el plan Pro de SPORTS AI.";
+  "Esta función está disponible con el plan Pro de NYVORX.";
 
 // --------------------------------------------------------------------------
 // Result types (re-exported by the action module to preserve imports)
@@ -235,7 +235,7 @@ export async function runGeneratePredictionExplanation(
       return {
         ok: false as const,
         code: "NO_PREDICTION" as const,
-        error: "Aún no hay una predicción persistida para este partido; primero generá el análisis SPORTS AI.",
+        error: "Aún no hay una predicción persistida para este partido; primero generá el análisis NYVORX.",
       };
     }
     const probs = canonical.model_probabilities;

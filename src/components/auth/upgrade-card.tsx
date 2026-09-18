@@ -14,7 +14,7 @@ export function UpgradeCard() {
     <Card className="match-panel match-intelligence-module">
       <CardHeader className="match-module-header">
         <CardTitle>
-          <span className="module-kicker">SPORTS AI PRO</span> Desbloqueá una capa más profunda del análisis
+          <span className="module-kicker">NYVORX PRO</span> Desbloqueá una capa más profunda del análisis
         </CardTitle>
         <CardSubtitle>Upgrade a Pro para acceder a todo el potencial del modelo.</CardSubtitle>
       </CardHeader>

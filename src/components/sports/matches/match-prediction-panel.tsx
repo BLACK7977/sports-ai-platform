@@ -32,24 +32,24 @@ function ExplanationBlock({
 }) {
   if (!explanation) {
     return (
-      <section className="match-explanation match-explanation-missing" aria-label="Lectura SPORTS AI">
-        <h3 className="match-explanation-kicker">LECTURA SPORTS AI</h3>
-        <p className="match-explanation-missing-text">Lectura SPORTS AI todavía no generada</p>
+      <section className="match-explanation match-explanation-missing" aria-label="Lectura NYVORX">
+        <h3 className="match-explanation-kicker">LECTURA NYVORX</h3>
+        <p className="match-explanation-missing-text">Lectura NYVORX todavía no generada</p>
       </section>
     );
   }
 
   if (explanation.plan === "free") {
     return (
-      <section className="match-explanation" aria-label="Lectura SPORTS AI · resumen">
-        <h3 className="match-explanation-kicker">LECTURA SPORTS AI</h3>
+      <section className="match-explanation" aria-label="Lectura NYVORX · resumen">
+        <h3 className="match-explanation-kicker">LECTURA NYVORX</h3>
         <p className="match-explanation-summary">{explanation.summary}</p>
         <div className="match-explanation-locked">
           <h4 className="match-explanation-subtitle">FACTORES CLAVE Y LECTURA DEL MODELO</h4>
           <div className="match-explanation-skeleton" aria-hidden>
             <i /><i /><i />
           </div>
-          <p>El desglose completo de la lectura está disponible con el plan Pro de SPORTS AI.</p>
+          <p>El desglose completo de la lectura está disponible con el plan Pro de NYVORX.</p>
           <LinkButton href={`/${sport}/premium-test`} tone="primary" size="sm" className="match-explanation-pro-cta">
             Conocé PRO
           </LinkButton>
@@ -59,8 +59,8 @@ function ExplanationBlock({
   }
 
   return (
-    <section className="match-explanation" aria-label="Lectura SPORTS AI">
-      <h3 className="match-explanation-kicker">LECTURA SPORTS AI</h3>
+    <section className="match-explanation" aria-label="Lectura NYVORX">
+      <h3 className="match-explanation-kicker">LECTURA NYVORX</h3>
       <p className="match-explanation-summary">{explanation.summary}</p>
       <h4 className="match-explanation-subtitle">FACTORES CLAVE</h4>
       <ul className="match-explanation-factors">
@@ -107,7 +107,7 @@ export default function MatchPredictionPanel({
   return (
     <Card className="match-panel match-prediction-panel match-prematch-prediction">
       <CardHeader className="match-module-header">
-        <CardTitle><span className="module-kicker">ANÁLISIS SPORTS AI</span> Predicción del partido</CardTitle>
+        <CardTitle><span className="module-kicker">ANÁLISIS NYVORX</span> Predicción del partido</CardTitle>
         <CardSubtitle>{PUBLIC_MODEL_VERSION_LINE} · {MODEL_EXPERIMENTAL_TAG}</CardSubtitle>
       </CardHeader>
       <CardBody>
@@ -143,9 +143,9 @@ export default function MatchPredictionPanel({
           );
         })() : (
           <div className="match-prediction-empty">
-            <p>Análisis SPORTS AI aún no generado</p>
+            <p>Análisis NYVORX aún no generado</p>
             <Button tone="primary" size="md" disabled={pending} onClick={handleGenerate}>
-              {pending ? "Generando análisis…" : "Analizar con SPORTS AI"}
+              {pending ? "Generando análisis…" : "Analizar con NYVORX"}
             </Button>
             {error ? <p className="match-prediction-error">{error}</p> : null}
           </div>

@@ -14,7 +14,7 @@ export default async function HomePage() {
   return <div className="home-stage">
     <Container size="wide" className="intelligence-page">
       <header className="intel-home-intro">
-        <span className="intel-eyebrow">SPORTS AI / FÚTBOL</span>
+        <span className="intel-eyebrow">NYVORX / FÚTBOL</span>
         <h1>Inteligencia deportiva basada en datos reales</h1>
         <p>Partidos, tabla y análisis del modelo en una lectura clara de la competición que elegís.</p>
       </header>

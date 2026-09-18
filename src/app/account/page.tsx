@@ -34,7 +34,7 @@ export default async function AccountPage() {
                 <span className="module-kicker">MI CUENTA</span> Tu perfil
               </CardTitle>
               <CardSubtitle>
-                Información de tu cuenta en Sports AI.
+                Información de tu cuenta en NYVORX.
               </CardSubtitle>
             </CardHeader>
             <CardBody>
@@ -74,7 +74,7 @@ export default async function AccountPage() {
                 <span className="module-kicker">MI CUENTA</span> Tu perfil
               </CardTitle>
               <CardSubtitle>
-                Información de tu cuenta en Sports AI.
+                Información de tu cuenta en NYVORX.
               </CardSubtitle>
             </CardHeader>
             <CardBody>
@@ -113,7 +113,7 @@ export default async function AccountPage() {
               <span className="module-kicker">MI CUENTA</span> Tu perfil
             </CardTitle>
             <CardSubtitle>
-              Información de tu cuenta en Sports AI.
+              Información de tu cuenta en NYVORX.
             </CardSubtitle>
           </CardHeader>
           <CardBody>
@@ -131,7 +131,7 @@ export default async function AccountPage() {
               <div className="border-t border-cyan-100/10 pt-4">
                 <p className="text-sm text-slate-400">Plan actual</p>
                 <p className="mt-1 text-sm font-medium text-slate-100">
-                  {isPremium ? "Sports AI Pro" : "Sports AI Free"}
+                  {isPremium ? "NYVORX Pro" : "NYVORX Free"}
                 </p>
                 {isPremium ? (
                   <p className="mt-1 text-xs text-emerald-400">

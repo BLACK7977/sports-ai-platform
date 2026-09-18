@@ -62,8 +62,8 @@ export function CompetitionIntelligenceContent({ sport, data, showQuickNav = tru
         ) : <p className="intel-empty">No hay partidos próximos registrados para esta temporada.</p>}
       </section>
 
-      <section className="intel-module intel-analysis" aria-label="Análisis SPORTS AI">
-        <ModuleTitle index="02 / MODELO" title="Análisis SPORTS AI" href={`/${sport}/predictions`} label="Historial" />
+      <section className="intel-module intel-analysis" aria-label="Análisis NYVORX">
+        <ModuleTitle index="02 / MODELO" title="Análisis NYVORX" href={`/${sport}/predictions`} label="Historial" />
         {analysis ? <div className="intel-analysis-body">
           <span className="intel-analysis-tag">Modelo experimental · Probabilidad del modelo</span>
           <Link href={matchDetailHref(sport, analysis.match.id)} className="intel-analysis-match">
@@ -89,7 +89,7 @@ export function CompetitionIntelligenceContent({ sport, data, showQuickNav = tru
             Goles esperados del modelo: local {analysis.expectedGoals.home.toFixed(2)} · visitante {analysis.expectedGoals.away.toFixed(2)}
           </p> : null}
           <p className="intel-analysis-meta">{publicModelVersionName(analysis.modelVersion)} · Predicción guardada {dateLabel(analysis.predictedAt)}</p>
-        </div> : <p className="intel-empty">Análisis SPORTS AI aún no disponible</p>}
+        </div> : <p className="intel-empty">Análisis NYVORX aún no disponible</p>}
       </section>
     </div>
 

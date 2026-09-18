@@ -1,16 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #040a12;
-  --foreground: #e7f3ff;
-  --sa-bg: #040a12;
-  --sa-surface: rgba(7, 19, 33, 0.92);
-  --sa-surface-raised: rgba(12, 29, 48, 0.94);
-  --sa-line: rgba(93, 226, 255, 0.16);
-  --sa-text: #e7f3ff;
-  --sa-muted: #8da2b8;
-  --sa-cyan: #55e7ff;
-  --sa-blue: #38bdf8;
+  /* NYVORX palette: primary black + cold white + cyan hero + teal secondary. */
+  --background: #020406;
+  --foreground: #eaf7fa;
+  --sa-bg: #020406;
+  --sa-surface: rgba(9, 13, 18, 0.92);
+  --sa-surface-raised: rgba(15, 21, 28, 0.94);
+  --sa-line: rgba(0, 229, 255, 0.18);
+  --sa-text: #eaf7fa;
+  --sa-muted: #7e8b96;
+  --sa-cyan: #00e5ff;
+  --sa-blue: #0fbfb3;
   --sa-violet: #8b5cf6;
   --sa-magenta: #ec4899;
   --sa-positive: #5dffb0;
@@ -20,34 +21,34 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-space-grotesk);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #020406;
+    --foreground: #eaf7fa;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-space-grotesk), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-sans), sans-serif;
 }
 
-/* Sports AI visual layer: graphite surfaces with restrained neon signals. */
+/* NYVORX visual layer: graphite surfaces with restrained cyan signals. */
 .home-stage {
-  --home-ink: #e7f3ff;
-  --home-muted: #8da2b8;
-  --home-line: rgba(93, 226, 255, 0.16);
+  --home-ink: #eaf7fa;
+  --home-muted: #7e8b96;
+  --home-line: rgba(0, 229, 255, 0.16);
   min-height: calc(100dvh - 4rem);
   margin-top: -2rem;
   padding: 2rem 0 1rem;
   color: var(--home-ink);
-  background: #07111d;
-  background-image: linear-gradient(rgba(82, 189, 230, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(82, 189, 230, 0.045) 1px, transparent 1px);
+  background: #06090d;
+  background-image: linear-gradient(rgba(0, 229, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.045) 1px, transparent 1px);
   background-size: 32px 32px;
 }
 
@@ -58,7 +59,7 @@ body {
 .sa-data-table { border-color: var(--sa-line) !important; }
 .sa-table-head { background: rgba(85, 231, 255, 0.055) !important; }
 .sa-table-scroll-hint { display: none; }
-:where(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid #7aefff; outline-offset: 3px; }
+:where(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 2px solid #00e5ff; outline-offset: 3px; }
 .sports-mobile-nav { display: none; }
 .sports-section-nav { display: flex; align-items: center; gap: 0.15rem; overflow-x: auto; scrollbar-width: none; }
 .sports-section-nav::-webkit-scrollbar { display: none; }
@@ -103,7 +104,7 @@ body {
   background: rgba(7, 17, 29, 0.9);
   box-shadow: 0 0 0 1px rgba(4, 10, 18, 0.9), 0 24px 80px rgba(0, 0, 0, 0.26);
 }
-.home-hero-grid { position: absolute; inset: 0; z-index: -1; opacity: 0.55; background: radial-gradient(circle at 78% 40%, rgba(55, 211, 255, 0.16), transparent 24%), linear-gradient(135deg, transparent 45%, rgba(154, 80, 255, 0.08) 100%); }
+.home-hero-grid { position: absolute; inset: 0; z-index: -1; opacity: 0.55; background: radial-gradient(circle at 78% 40%, rgba(0, 229, 255, 0.16), transparent 24%), linear-gradient(135deg, transparent 45%, rgba(15, 191, 179, 0.1) 100%); }
 .home-kicker { background: rgba(50, 208, 255, 0.12); color: #8aeaff; border-color: rgba(50, 208, 255, 0.35); }
 .home-title { max-width: 720px; margin: 0; color: #f5fbff; font-size: clamp(2.5rem, 6vw, 5.7rem); line-height: 0.95; letter-spacing: -0.04em; font-weight: 800; }
 .home-title-mark { color: #55e7ff; text-shadow: 0 0 24px rgba(85, 231, 255, 0.8); }
@@ -123,7 +124,7 @@ body {
 .home-signal-bars i { flex: 1; height: 35%; background: #4fe7ff; box-shadow: 0 0 10px rgba(79, 231, 255, 0.4); }
 .home-signal-bars i:nth-child(2), .home-signal-bars i:nth-child(6) { height: 60%; }
 .home-signal-bars i:nth-child(3), .home-signal-bars i:nth-child(5) { height: 82%; }
-.home-signal-bars i:nth-child(4) { height: 100%; background: #b779ff; }
+.home-signal-bars i:nth-child(4) { height: 100%; background: #0fbfb3; }
 .home-signal-panel p { margin-top: 1rem; color: #71899d; font-size: 0.72rem; line-height: 1.5; }
 .home-section-head { display: flex; align-items: end; justify-content: space-between; gap: 2rem; padding: 0.5rem 0; }
 .home-section-head h2 { margin-top: 0.4rem; color: #eaf8ff; font-size: clamp(1.5rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -0.03em; }
@@ -165,10 +166,6 @@ body {
   .home-match-team-right { text-align: right; }
   .home-footnote { display: grid; gap: 0.4rem; }
 }
-.brand-mark { display: inline-flex; height: 2rem; width: 2rem; align-items: center; justify-content: center; border: 1px solid #55e7ff; border-radius: 0.55rem; color: #55e7ff; background: #07111d; box-shadow: 0 0 16px rgba(85, 231, 255, 0.32); }
-.brand-mark span { font-size: 1rem; filter: saturate(0.8); }
-.brand-wordmark { color: #eaf8ff; font-size: 0.83rem; letter-spacing: 0.12em; }
-.brand-wordmark b { color: #55e7ff; font-weight: 800; }
 /* Match Intelligence visual system: terminal-led, asymmetrical, not card-grid UI. */
 .match-intelligence-stage {
   position: relative;

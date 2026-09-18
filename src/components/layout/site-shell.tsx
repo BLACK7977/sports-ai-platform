@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { getActiveSports } from "@/lib/config/sports-registry";
 import { Container, Row } from "@/components/ui/container";
@@ -51,7 +52,7 @@ async function AuthState() {
           <Link href="/register" className="inline-flex items-center rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition">Crear cuenta</Link>
         </div>
         {/* Mobile */}
-        <div className="flex md:hidden items-center gap-2 px-4 py-2 border-b border-cyan-100/10 bg-[#050d18]/88">
+        <div className="flex md:hidden items-center gap-2 px-4 py-2 border-b border-[#00e5ff]/15 bg-[#090d12]/88">
           <Link href="/login" className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition">Ingresar</Link>
           <Link href="/register" className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition">Crear cuenta</Link>
         </div>
@@ -75,7 +76,7 @@ async function AuthState() {
         <LogoutButton />
       </div>
       {/* Mobile */}
-      <div className="flex md:hidden items-center justify-between gap-2 px-4 py-2 border-b border-cyan-100/10 bg-[#050d18]/88">
+      <div className="flex md:hidden items-center justify-between gap-2 px-4 py-2 border-b border-[#00e5ff]/15 bg-[#090d12]/88">
         <Link href="/account" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition" title="Mi cuenta">
           <span className="max-w-24 truncate text-slate-400">{email}</span>
           <PlanBadge role={role} />
@@ -90,13 +91,29 @@ export async function SiteHeader() {
   const sports = getActiveSports();
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-cyan-100/10 bg-[#050d18]">
+      <header className="sticky top-0 z-40 border-b border-[#00e5ff]/15 bg-[#090d12]">
         <Container size="wide" className="h-16 flex items-center justify-between gap-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
-          >          <span className="brand-mark" aria-hidden><span>⚽</span></span>
-            <span className="brand-wordmark">SPORTS <b>AI</b></span>
+            className="inline-flex items-center gap-2"
+            aria-label="NYVORX — Sports Intelligence"
+          >
+            <Image
+              src="/brand/nyvorx-logo-horizontal.png"
+              alt=""
+              width={180}
+              height={42}
+              priority
+              className="hidden md:block h-8 w-auto"
+            />
+            <Image
+              src="/brand/nyvorx-isotype.svg"
+              alt=""
+              width={64}
+              height={64}
+              priority
+              className="block md:hidden h-8 w-auto"
+            />
           </Link>
           <nav className="hidden lg:flex items-center gap-1 text-sm">
             <Link href="/" className="inline-flex items-center rounded-lg px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-800">Inicio</Link>
@@ -127,10 +144,10 @@ export async function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer-signal mt-0 border-t border-cyan-100/10 bg-[#050d18]/80">
+    <footer className="site-footer-signal mt-0 border-t border-[#00e5ff]/15 bg-[#090d12]/80">
       <Container size="wide" className="pb-10 pt-16 text-sm text-slate-500 dark:text-slate-400">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-          <div>© {new Date().getFullYear()} Sports AI Platform — MVP</div>
+          <div>© {new Date().getFullYear()} NYVORX — Sports Intelligence</div>
           <div className="flex flex-wrap gap-4">
             <Link href="/">Inicio</Link>
             <Link href="/soccer">Fútbol</Link>
@@ -145,7 +162,7 @@ export function SiteFooter() {
 
 export function SiteShell({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-[#040b13]">
+    <div className="flex min-h-dvh flex-col bg-[#020406]">
       <SiteHeader />
       <main className="sports-app-main flex-1 py-8">{children}</main>
       <SportsNavigation variant="mobile" />

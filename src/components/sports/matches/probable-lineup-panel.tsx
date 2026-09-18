@@ -71,7 +71,7 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
       <section className="probable-lineup-cta" aria-label="Predicción de alineación probable">
         <p className="probable-lineup-cta-title">¿Cuándo se publican las alineaciones?</p>
         <p className="probable-lineup-cta-text">
-          Aún no hay alineación oficial para este partido. Podés ver la alineación más probable de ambos equipos, generada automáticamente por SPORTS AI a partir de alineaciones oficiales y formaciones recientes.
+          Aún no hay alineación oficial para este partido. Podés ver la alineación más probable de ambos equipos, generada automáticamente por NYVORX a partir de alineaciones oficiales y formaciones recientes.
         </p>
         <button className="probable-lineup-cta-button" type="button" onClick={generate} disabled={pending}>
           {pending ? "Generando alineación…" : "Predecir alineación"}
@@ -95,7 +95,7 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
   return (
     <section className="probable-lineup" aria-label={`Alineación probable de ${teamLabel}`}>
       <header className="probable-lineup-header">
-        <p className="probable-lineup-kicker">ALINEACIÓN PROBABLE · SPORTS AI</p>
+        <p className="probable-lineup-kicker">ALINEACIÓN PROBABLE · NYVORX</p>
         <p className="probable-lineup-meta">Formación estimada: <strong>{active.formation || "—"}</strong></p>
         <p className="probable-lineup-meta">Cobertura de evidencia: <strong>{coverPercent(active.coverage)}%</strong></p>
         <p className="probable-lineup-source">Generada a partir de alineaciones y formaciones recientes.</p>
@@ -115,7 +115,7 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
         ))}
       </div>
       <TacticalPitch teamName={teamLabel} formation={active.formation} players={players} />
-      <p className="probable-lineup-disclaimer">Esta alineación es una estimación generada por SPORTS AI y puede variar respecto de la alineación oficial.</p>
+      <p className="probable-lineup-disclaimer">Esta alineación es una estimación generada por NYVORX y puede variar respecto de la alineación oficial.</p>
     </section>
   );
 }
