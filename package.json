@@ -44,6 +44,7 @@
     "smoke:sprint4c": "tsx --conditions=react-server src/lib/scripts/smoke-tests-sprint4c.ts",
     "smoke:entity-id": "tsx --conditions=react-server src/lib/scripts/smoke-tests-entity-id.ts",
     "smoke:score-refresh": "tsx --conditions=react-server src/lib/scripts/smoke-tests-score-refresh.ts",
+    "smoke:sync-cron": "tsx --conditions=react-server src/lib/scripts/smoke-tests-sync-cron.ts",
     "smoke:env": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-init.ts",
     "smoke:env-flags": "tsx --conditions=react-server src/lib/scripts/smoke-tests-env-flags.ts",
     "smoke:offline-or": "tsx --conditions=react-server src/lib/scripts/smoke-tests-offline-or.ts",

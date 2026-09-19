@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/sync-sportmonks",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/admin/sync-sportmonks",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
