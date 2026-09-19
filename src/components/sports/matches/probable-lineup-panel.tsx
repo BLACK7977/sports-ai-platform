@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { actionGenerateProbableLineup } from "@/app/[sport]/matches/[id]/actions";
 import type { ProbableLineupTeamView } from "@/lib/types/probable-lineup";
 import type { SportId } from "@/types/core/sport";
+import type { ViewerPlan } from "@/lib/presentation/viewer-plan";
+import { ProLockCta } from "@/components/auth/pro-lock-cta";
 import { TacticalPitch, type TacticalPitchPlayer } from "./tactical-pitch";
 
 function coverPercent(coverage: number): number {
@@ -27,7 +29,7 @@ function toPitchPlayer(team: ProbableLineupTeamView): TacticalPitchPlayer[] {
  * lineup on demand for both teams; the canonical runs are persisted server
  * side and shown here after generation.
  */
-export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName, awayTeamId, awayTeamName, mode, initialTeams }: {
+export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName, awayTeamId, awayTeamName, mode, initialTeams, plan }: {
   sportId: SportId;
   matchId: string;
   homeTeamId: string;
@@ -36,6 +38,7 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
   awayTeamName: string;
   mode: "cta" | "probable";
   initialTeams: ProbableLineupTeamView[];
+  plan: ViewerPlan;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -43,6 +46,8 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
   const [available, setAvailable] = useState(mode === "probable");
   const [error, setError] = useState<string | null>(null);
   const [activeTeamId, setActiveTeamId] = useState<string>(initialTeams[0]?.teamId ?? "");
+
+  const isPro = plan === "pro";
 
   const generate = () => {
     if (pending) return;
@@ -69,15 +74,25 @@ export function ProbableLineupPanel({ sportId, matchId, homeTeamId, homeTeamName
   if (!available) {
     return (
       <section className="probable-lineup-cta" aria-label="Predicción de alineación probable">
-        <p className="probable-lineup-cta-title">¿Cuándo se publican las alineaciones?</p>
-        <p className="probable-lineup-cta-text">
-          Aún no hay alineación oficial para este partido. Podés ver la alineación más probable de ambos equipos, generada automáticamente por NYVORX a partir de alineaciones oficiales y formaciones recientes.
-        </p>
-        <button className="probable-lineup-cta-button" type="button" onClick={generate} disabled={pending}>
-          {pending ? "Generando alineación…" : "Predecir alineación"}
-        </button>
-        {error ? <p className="probable-lineup-error" role="alert">{error}</p> : null}
-        <p className="probable-lineup-disclaimer">Esta alineación es una estimación y puede variar respecto de la alineación oficial.</p>
+        {isPro ? (
+          <>
+            <p className="probable-lineup-cta-title">¿Cuándo se publican las alineaciones?</p>
+            <p className="probable-lineup-cta-text">
+              Aún no hay alineación oficial para este partido. Podés ver la alineación más probable de ambos equipos, generada automáticamente por NYVORX a partir de alineaciones oficiales y formaciones recientes.
+            </p>
+            <button className="probable-lineup-cta-button" type="button" onClick={generate} disabled={pending}>
+              {pending ? "Generando alineación…" : "Predecir alineación"}
+            </button>
+            {error ? <p className="probable-lineup-error" role="alert">{error}</p> : null}
+            <p className="probable-lineup-disclaimer">Esta alineación es una estimación y puede variar respecto de la alineación oficial.</p>
+          </>
+        ) : (
+          <ProLockCta
+            sport={sportId}
+            title="Alineaciones probables"
+            description="La generación de alineaciones probables con IA es una función exclusiva de NYVORX PRO."
+          />
+        )}
       </section>
     );
   }

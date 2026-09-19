@@ -66,9 +66,11 @@ export default async function PremiumTestRoute({
                 </p>
                 <ul className="premium-active-list">
                   <li>Lectura completa de cada predicción (resumen + factores clave + lectura técnica)</li>
-                  <li>Predicciones de próximos partidos y formaciones probables</li>
-                  <li>Historial y filtros de predicciones</li>
-                  <li>Análisis de jugadores y contexto de la competición</li>
+                  <li>Explicaciones avanzadas de predicción, generadas con IA</li>
+                  <li>Radiografía del partido y análisis IA del escenario</li>
+                  <li>Informes avanzados de jugadores con IA</li>
+                  <li>Generación de alineaciones probables para partidos futuros</li>
+                  <li>Temas exclusivos de interfaz (Oro, Rosa, Verde y Rojo)</li>
                 </ul>
                 <p className="mt-2 text-xs text-slate-500">
                   Los módulos restantes se activan a medida que se sincronizan los datos de la competición.
@@ -104,7 +106,7 @@ export default async function PremiumTestRoute({
             />
             <PremiumPreview
               title="Análisis Profundo"
-              description="Predicciones de próximos partidos, formaciones probables y contexto de la competición."
+              description="Radiografía del partido, informes avanzados de jugadores y generación de alineaciones probables con IA."
             />
           </div>
           <Card className="match-panel">
@@ -118,18 +120,22 @@ export default async function PremiumTestRoute({
                 <div className="premium-compare-col">
                   <strong className="premium-compare-plan">GRATIS</strong>
                   <ul>
+                    <li>Probabilidades del modelo (1X2)</li>
+                    <li>Predicción del modelo por partido</li>
                     <li>Resumen de la lectura NYVORX</li>
-                    <li>Probabilidades del modelo</li>
-                    <li>Predicciones y análisis por partido</li>
-                    <li>Planteles y formaciones probables</li>
+                    <li>Predicciones de próximos partidos</li>
+                    <li>Historial de predicciones</li>
                   </ul>
                 </div>
                 <div className="premium-compare-col premium-compare-pro">
                   <strong className="premium-compare-plan">PRO</strong>
                   <ul>
                     <li>Lectura completa: factores clave + lectura técnica</li>
-                    <li>Todo lo del plan Free</li>
-                    <li>Historial y filtros de predicciones</li>
+                    <li>Explicaciones avanzadas de predicción con IA</li>
+                    <li>Radiografía del partido con IA</li>
+                    <li>Informes avanzados de jugadores</li>
+                    <li>Generación de alineaciones probables</li>
+                    <li>Temas exclusivos de interfaz</li>
                   </ul>
                 </div>
               </div>

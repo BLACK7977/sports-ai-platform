@@ -15,6 +15,7 @@ import { createProductionPredictionExplanationRepo } from "@/lib/db/repositories
 import { readPersistedExplanation } from "@/lib/services/prediction-explanation-service";
 import { presentExplanation, type PredictionExplanationView } from "@/lib/types/prediction-explanation";
 import { resolveExplanationPlanForRender } from "@/lib/presentation/explanation-availability";
+import { resolveViewerPlanForRender } from "@/lib/presentation/theme";
 import { getProbableLineupForMatch } from "@/lib/db/repositories/probable-lineups-repo";
 import { DEFAULT_MARKET_ID, DEFAULT_MODEL_VERSION_ID } from "@/lib/ai/prediction-service";
 import { getPersistedMatchContext } from "@/lib/db/repositories/match-context-repo";
@@ -80,6 +81,7 @@ export default async function MatchDetailRoute({
   // no provider call from SSR, RSC, page load, refresh or navigation. Missing
   // or unreadable explanation → null → the panel renders the neutral state.
   let explainedView: PredictionExplanationView | null = null;
+  const viewerPlan = await resolveViewerPlanForRender();
   if (canonicalPrediction) {
     const [plan, payload] = await Promise.all([
       resolveExplanationPlanForRender(),
@@ -112,6 +114,7 @@ export default async function MatchDetailRoute({
       probableLineup={probableLineup}
       matchContext={matchContext}
       explanation={explainedView}
+      plan={viewerPlan}
     />
   );
 }

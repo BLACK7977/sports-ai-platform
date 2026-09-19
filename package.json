@@ -27,6 +27,7 @@
     "test:match-context": "tsx --conditions=react-server src/lib/scripts/smoke-tests-match-context.ts",
     "test:probable-lineup": "tsx --conditions=react-server src/lib/scripts/smoke-tests-probable-lineup.ts",
     "test:action-authorization": "tsx --env-file=.env.local --conditions=react-server src/lib/scripts/smoke-tests-action-authorization.ts",
+    "test:entitlement-themes": "tsx --conditions=react-server src/lib/scripts/smoke-tests-entitlement-themes.ts",
     "test:navigation": "tsx --conditions=react-server src/lib/scripts/smoke-tests-navigation.ts",
     "smoke": "tsx --conditions=react-server src/lib/scripts/smoke-tests.ts",
     "smoke:b3": "tsx --conditions=react-server src/lib/scripts/smoke-tests-bloque3.ts",

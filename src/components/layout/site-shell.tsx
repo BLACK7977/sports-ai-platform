@@ -52,7 +52,7 @@ async function AuthState() {
           <Link href="/register" className="inline-flex items-center rounded-lg px-3 py-2 text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition">Crear cuenta</Link>
         </div>
         {/* Mobile */}
-        <div className="flex md:hidden items-center gap-2 px-4 py-2 border-b border-[#00e5ff]/15 bg-[#090d12]/88">
+        <div className="flex md:hidden items-center gap-2 px-4 py-2 border-b border-(--sa-chrome-line) bg-[#090d12]/88">
           <Link href="/login" className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition">Ingresar</Link>
           <Link href="/register" className="inline-flex items-center rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition">Crear cuenta</Link>
         </div>
@@ -76,7 +76,7 @@ async function AuthState() {
         <LogoutButton />
       </div>
       {/* Mobile */}
-      <div className="flex md:hidden items-center justify-between gap-2 px-4 py-2 border-b border-[#00e5ff]/15 bg-[#090d12]/88">
+      <div className="flex md:hidden items-center justify-between gap-2 px-4 py-2 border-b border-(--sa-chrome-line) bg-[#090d12]/88">
         <Link href="/account" className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:text-white hover:bg-slate-800 transition" title="Mi cuenta">
           <span className="max-w-24 truncate text-slate-400">{email}</span>
           <PlanBadge role={role} />
@@ -91,7 +91,7 @@ export async function SiteHeader() {
   const sports = getActiveSports();
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-[#00e5ff]/15 bg-[#090d12]">
+      <header className="sticky top-0 z-40 border-b border-(--sa-chrome-line) bg-[#090d12]">
         <Container size="wide" className="h-16 flex items-center justify-between gap-4">
           <Link
             href="/"
@@ -132,7 +132,7 @@ export async function SiteHeader() {
             </div>
           </details>
           <Row className="hidden md:flex" gap="sm">
-            <span aria-hidden className="h-6 w-px bg-[#00e5ff]/15" />
+            <span aria-hidden className="h-6 w-px bg-(--sa-chrome-line)" />
             {dbStatusBadge()}
             <span className="text-xs text-slate-500">v0.1 · Beta</span>
           </Row>
@@ -145,7 +145,7 @@ export async function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer-signal mt-0 border-t border-[#00e5ff]/15 bg-[#090d12]/80">
+    <footer className="site-footer-signal mt-0 border-t border-(--sa-chrome-line) bg-[#090d12]/80">
       <Container size="wide" className="pb-10 pt-16 text-sm text-slate-500 dark:text-slate-400">
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
           <div>© {new Date().getFullYear()} NYVORX — Sports Intelligence</div>

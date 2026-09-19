@@ -43,6 +43,20 @@ import {
   type PredictionExplanationView,
 } from "@/lib/types/prediction-explanation";
 import { resolveActionAccess, type SessionAuthClient } from "@/lib/auth/session";
+import {
+  GENERIC_ERROR,
+  RATE_LIMIT_ERROR,
+  AUTH_REQUIRED_ERROR,
+  PRO_REQUIRED_ERROR,
+} from "@/lib/services/action-errors";
+
+// Re-exportado para compatibilidad con los imports existentes de la action.
+export {
+  GENERIC_ERROR,
+  RATE_LIMIT_ERROR,
+  AUTH_REQUIRED_ERROR,
+  PRO_REQUIRED_ERROR,
+};
 
 /**
  * Testable core of the match generation Server Actions.
@@ -59,19 +73,9 @@ import { resolveActionAccess, type SessionAuthClient } from "@/lib/auth/session"
  *   request → server-side auth/entitlement → rate limit → eligibility
  *   → generation/service → persistence → server-side presentation
  * Unauthorized requests terminate before any expensive work, provider call or
- * DB write.
+ * DB write. PRO-only actions additionally terminate (before rate limit) when
+ * the authenticated user's profiles.role is "free".
  */
-
-export const GENERIC_ERROR =
-  "No se pudo generar el análisis. Intentá de nuevo en unos segundos.";
-
-export const RATE_LIMIT_ERROR =
-  "Demasiadas solicitudes. Esperá unos segundos antes de intentar de nuevo.";
-
-export const AUTH_REQUIRED_ERROR = "Iniciá sesión para continuar.";
-
-export const PRO_REQUIRED_ERROR =
-  "Esta función está disponible con el plan Pro de NYVORX.";
 
 // --------------------------------------------------------------------------
 // Result types (re-exported by the action module to preserve imports)
@@ -95,7 +99,7 @@ export type ProbableLineupActionResult =
   | { ok: true; teams: ProbableLineupTeamView[]; generated: boolean }
   | {
       ok: false;
-      code: "UNAUTHORIZED" | "UNAVAILABLE" | "RATE_LIMIT" | "GENERIC";
+      code: "UNAUTHORIZED" | "PRO_REQUIRED" | "UNAVAILABLE" | "RATE_LIMIT" | "GENERIC";
       error: string;
     };
 
@@ -416,16 +420,18 @@ export async function runGenerateUpcomingPrediction(
 }
 
 // --------------------------------------------------------------------------
-// Probable lineup (any authenticated user)
+// Probable lineup (PRO-only generation)
 // --------------------------------------------------------------------------
 
 /**
  * On-demand probable lineup for an upcoming scheduled match without an
  * official lineup yet.
  *
- * Authorization: anonymous → UNAUTHORIZED before the rate limit, model run or
- * write. Authenticated users (free or premium) keep the current product
- * behavior, subject to the existing rate limit.
+ * Authorization, BEFORE the rate limit and any eligibility read, model run or
+ * write:
+ *   - anonymous          → UNAUTHORIZED
+ *   - authenticated free → PRO_REQUIRED
+ *   - authenticated PRO  → allowed subject to the existing rate limit
  *
  * Server-side only (service role never leaves the server). Revalidates every
  * request: match scheduled, kickoff future, official lineup still absent,
@@ -447,6 +453,9 @@ export async function runGenerateProbableLineup(
   const access = await resolveActionAccess(deps.authClient);
   if (access.status === "anonymous") {
     return { ok: false as const, code: "UNAUTHORIZED" as const, error: AUTH_REQUIRED_ERROR };
+  }
+  if (access.role !== "premium") {
+    return { ok: false as const, code: "PRO_REQUIRED" as const, error: PRO_REQUIRED_ERROR };
   }
 
   try {

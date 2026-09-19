@@ -12,22 +12,28 @@ import {
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/container";
 import { actionGeneratePlayerReport } from "@/app/[sport]/players/[id]/actions";
+import { ProLockCta } from "@/components/auth/pro-lock-cta";
 import type { PlayerInsightResult } from "@/types/ai";
+import type { ViewerPlan } from "@/lib/presentation/viewer-plan";
 
 export default function PlayerReportPanel({
   sport,
   leagueId,
   seasonId,
   playerId,
+  plan,
 }: {
   sport: string;
   leagueId: string;
   seasonId: string;
   playerId: string;
+  plan: ViewerPlan;
 }) {
   const [report, setReport] = useState<PlayerInsightResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isPro = plan === "pro";
 
   async function handleGenerate() {
     setBusy(true);
@@ -81,7 +87,7 @@ export default function PlayerReportPanel({
               )}
             </div>
           </div>
-        ) : (
+        ) : isPro ? (
           <div className="space-y-3">
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Generar un informe de rendimiento con IA: fortalezas, debilidades
@@ -92,6 +98,12 @@ export default function PlayerReportPanel({
             </Button>
             {error ? <p className="text-sm text-rose-500">{error}</p> : null}
           </div>
+        ) : (
+          <ProLockCta
+            sport={sport}
+            title="Informe avanzado del jugador"
+            description="Los informes de rendimiento con IA son una función exclusiva de NYVORX PRO."
+          />
         )}
       </CardBody>
       {report ? (

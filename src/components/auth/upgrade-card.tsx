@@ -2,10 +2,12 @@ import { Card, CardBody, CardHeader, CardTitle, CardSubtitle } from "@/component
 import { Badge } from "@/components/ui/badge";
 
 const features = [
-  "Lectura completa del modelo: resumen, factores clave y lectura técnica",
-  "Probabilidades completas de local, empate y visitante",
-  "Análisis del modelo por partido y predicciones de próximos partidos",
-  "Historial y filtros de predicciones",
+  "Lectura completa de cada predicción: resumen, factores clave y lectura técnica",
+  "Explicaciones avanzadas de cada predicción, generadas con IA",
+  "Radiografía del partido y análisis IA del escenario",
+  "Informes avanzados de jugadores con IA",
+  "Generación de alineaciones probables para partidos futuros",
+  "Temas exclusivos de interfaz (Oro, Rosa, Verde y Rojo)",
 ];
 
 export function UpgradeCard() {

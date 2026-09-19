@@ -6,7 +6,7 @@ type Size = "sm" | "md" | "lg";
 
 const toneMap: Record<Tone, string> = {
   primary:
-    "bg-cyan-400 text-slate-950 hover:bg-cyan-300 focus-visible:ring-cyan-400/40 shadow-[0_0_18px_rgba(78,234,255,0.2)] disabled:bg-cyan-400/60",
+    "bg-cyan-400 text-slate-950 hover:bg-cyan-300 focus-visible:ring-cyan-400/40 shadow-(--sa-cyan-glow) disabled:bg-cyan-400/60",
   secondary:
     "bg-sky-500/15 text-sky-100 hover:bg-sky-400/20 border border-sky-300/25 focus-visible:ring-sky-400/40",
   ghost:

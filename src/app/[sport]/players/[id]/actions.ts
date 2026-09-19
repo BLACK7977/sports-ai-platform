@@ -12,7 +12,10 @@ import {
 } from "@/lib/ai/rate-limiter";
 import { AiFeatureUnavailableError } from "@/lib/ai/ai-guard";
 import { resolveActionAccess } from "@/lib/auth/session";
-import { AUTH_REQUIRED_ERROR } from "@/lib/services/match-generation-actions";
+import {
+  AUTH_REQUIRED_ERROR,
+  PRO_REQUIRED_ERROR,
+} from "@/lib/services/match-generation-actions";
 import type { SportId } from "@/types/core/sport";
 
 const GENERIC_ERROR =
@@ -26,6 +29,8 @@ const RATE_LIMIT_ERROR =
 
 // El informe se genera on-demand desde un componente client (nunca en el
 // render SSR de la página), protegido por rate limit por IP.
+// Es PRO-only: el rol se resuelve server-side desde profiles y el rechazo
+// ocurre ANTES del rate limit y de cualquier llamada al proveedor.
 export async function actionGeneratePlayerReport(
   sportId: SportId,
   leagueId: string,
@@ -46,6 +51,9 @@ export async function actionGeneratePlayerReport(
   const access = await resolveActionAccess();
   if (access.status === "anonymous") {
     return { ok: false as const, error: AUTH_REQUIRED_ERROR };
+  }
+  if (access.role !== "premium") {
+    return { ok: false as const, error: PRO_REQUIRED_ERROR };
   }
   const h = await headers();
   const clientKey = getClientIp(h);

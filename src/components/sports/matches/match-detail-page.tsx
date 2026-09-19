@@ -90,6 +90,11 @@ function jsonNumber(source: Record<string, unknown>, keys: string[]): number | n
   return null;
 }
 
+/** Fuera del cuerpo del componente (server render): la página es dinámica por definición. */
+function currentTimestampMs(): number {
+  return Date.now();
+}
+
 function initials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0] ?? "").join("").toUpperCase();
 }
@@ -138,7 +143,7 @@ function ClubCrest({ team, away = false }: { team: Team; away?: boolean }) {
 }
 
 export default function MatchDetailPage({
-sport,
+  sport,
   match,
   home,
   away,
@@ -148,12 +153,13 @@ sport,
   allSeasonMatches,
   squadRanking,
   playerMap,
-seasonTeams,
+  seasonTeams,
   enrichment,
   canonicalPrediction,
   probableLineup,
   matchContext,
   explanation,
+  plan,
 }: {
   sport: string;
   match: Match;
@@ -176,6 +182,7 @@ canonicalPrediction?: Prediction | null;
   probableLineup?: { runs: ProbableLineupRun[]; players: ProbableLineupPlayer[] } | null;
   matchContext: PersistedMatchContext;
   explanation?: PredictionExplanationView | null;
+  plan: "free" | "pro";
 }) {
   const homeStanding = standings.find((row) => row.teamId === home.id);
   const awayStanding = standings.find((row) => row.teamId === away.id);
@@ -261,7 +268,7 @@ canonicalPrediction?: Prediction | null;
   ].filter(Boolean) as string[];
   const liveMinute = jsonNumber(matchData, ["minute", "match_minute", "elapsed"]);
   const hasDisplayScore = (match.status === "finished" || match.status === "in_progress") && homeScore != null && awayScore != null;
-  const isFutureScheduled = match.status === "scheduled" && Number.isFinite(Date.parse(match.match_date)) && Date.parse(match.match_date) > Date.now();
+  const isFutureScheduled = match.status === "scheduled" && Number.isFinite(Date.parse(match.match_date)) && Date.parse(match.match_date) > currentTimestampMs();
   const hasOfficialLineups = Boolean(enrichment?.lineups && enrichment.lineups.length > 0);
   const canonicRuns = probableLineup?.runs ?? [];
   const hasCanonicalProbable = canonicRuns.some((run) => run.status === "AVAILABLE");
@@ -435,7 +442,7 @@ const scoreContext = match.status === "in_progress"
                       : null;
                     return (
                       <div className="match-event-item" key={evt.id}>
-                        <span className="match-event-minute">{minute}'</span>
+                        <span className="match-event-minute">{minute}&apos;</span>
                         <div className="match-event-content">
                           <span className={`match-event-type match-event-type-${evt.event_type?.toLowerCase() ?? "unknown"}`}>{translateEventType(evt.event_type)}</span>
                           <div className="match-event-copy">
@@ -488,6 +495,7 @@ const scoreContext = match.status === "in_progress"
                   awayTeamName={away.name}
                   mode={lineupPrecedence === "probable" ? "probable" : "cta"}
                   initialTeams={probableViews}
+                  plan={plan}
                 />
               </CardBody>
             </Card>
@@ -514,6 +522,7 @@ const scoreContext = match.status === "in_progress"
                 seasonId={match.season_id}
                 homeShort={home.short_name}
                 awayShort={away.short_name}
+                plan={plan}
               />
               <Card className="match-panel match-experimental-module match-signal-module"><CardHeader className="match-module-header"><CardTitle><span className="module-kicker">SEÑALES</span> Cobertura disponible</CardTitle><CardSubtitle>Datos que alimentan esta lectura</CardSubtitle></CardHeader><CardBody><div className="match-signal-list">{dataSignals.length ? dataSignals.map((signal) => <div key={signal}><span>+</span>{signal}</div>) : <div className="match-empty-state">No hay señales suficientes registradas.</div>}<div><span>·</span> Tiros, córners y posesión en directo cuando la fuente los entregue</div></div></CardBody></Card>
             </div>

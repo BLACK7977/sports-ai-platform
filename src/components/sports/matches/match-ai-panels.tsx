@@ -11,7 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { MatchProbabilityBar } from "@/components/charts/svg-charts";
 import { actionAnalyzeMatch, actionPredictMatch } from "@/app/[sport]/matches/[id]/actions";
+import { ProLockCta } from "@/components/auth/pro-lock-cta";
 import type { MatchAnalysisResult, MatchPredictionResult } from "@/types/ai";
+import type { ViewerPlan } from "@/lib/presentation/viewer-plan";
 
 type AiBusy = "analysis" | "prediction" | null;
 
@@ -22,6 +24,7 @@ export default function MatchAiPanels({
   seasonId,
   homeShort,
   awayShort,
+  plan,
 }: {
   sport: string;
   matchId: string;
@@ -29,11 +32,14 @@ export default function MatchAiPanels({
   seasonId: string;
   homeShort: string;
   awayShort: string;
+  plan: ViewerPlan;
 }) {
   const [analysis, setAnalysis] = useState<MatchAnalysisResult | null>(null);
   const [prediction, setPrediction] = useState<MatchPredictionResult | null>(null);
   const [busy, setBusy] = useState<AiBusy>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isPro = plan === "pro";
 
   async function handleAnalysis() {
     setBusy("analysis");
@@ -138,7 +144,7 @@ export default function MatchAiPanels({
                 </ul>
               </div>
             </div>
-          ) : (
+          ) : isPro ? (
             <div className="match-ai-cta">
               <p>
                 Generar una lectura detallada del escenario con IA, a partir del
@@ -154,6 +160,12 @@ export default function MatchAiPanels({
                   : "Generar análisis con IA"}
               </Button>
             </div>
+          ) : (
+            <ProLockCta
+              sport={sport}
+              title="Radiografía con IA"
+              description="La radiografía del partido con IA es una función exclusiva de NYVORX PRO."
+            />
           )}
           {error ? (
             <div className="match-empty-state match-ai-error">{error}</div>

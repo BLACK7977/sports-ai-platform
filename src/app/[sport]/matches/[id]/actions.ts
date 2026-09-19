@@ -19,6 +19,7 @@ import {
   GENERIC_ERROR,
   RATE_LIMIT_ERROR,
   AUTH_REQUIRED_ERROR,
+  PRO_REQUIRED_ERROR,
 } from "@/lib/services/match-generation-actions";
 import { resolveActionAccess } from "@/lib/auth/session";
 
@@ -35,6 +36,10 @@ const UNAVAILABLE_ERROR =
 // Las páginas ya NO generan AI en el render del servidor: la AI se
 // solicita on-demand desde componentes client mediante estas Server
 // Actions, protegidas por rate limit por IP.
+//
+// Radiografía ("match-analysis") es PRO-only: el rol se resuelve server-side
+// desde profiles y el rechazo ocurre ANTES del rate limit y de cualquier
+// llamada al proveedor.
 export async function actionAnalyzeMatch(
   sportId: SportId,
   matchId: string,
@@ -48,6 +53,9 @@ export async function actionAnalyzeMatch(
   const access = await resolveActionAccess();
   if (access.status === "anonymous") {
     return { ok: false as const, error: AUTH_REQUIRED_ERROR };
+  }
+  if (access.role !== "premium") {
+    return { ok: false as const, error: PRO_REQUIRED_ERROR };
   }
   const h = await headers();
   const clientKey = getClientIp(h);

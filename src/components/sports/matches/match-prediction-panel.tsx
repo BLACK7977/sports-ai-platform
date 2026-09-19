@@ -78,7 +78,7 @@ function ExplanationBlock({
           </div>
           <p>El desglose completo de la lectura está disponible con el plan Pro de NYVORX.</p>
           <LinkButton href={`/${sport}/premium-test`} tone="primary" size="sm" className="match-explanation-pro-cta">
-            Ver NYVORX PRO
+            Desbloquear con NYVORX PRO
           </LinkButton>
         </div>
       </section>

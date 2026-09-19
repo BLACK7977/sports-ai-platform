@@ -358,7 +358,7 @@ export function MiniGauge({
   const w = 120;
   const h = 8;
   const colors: Record<typeof tone, string> = {
-    primary: "#00e5ff",
+    primary: "var(--sa-cyan)",
     success: "#10b981",
     warning: "#f59e0b",
     danger: "#ef4444",
@@ -388,7 +388,7 @@ export function MiniGauge({
           width={w * pct}
           height={h}
           rx={h / 2}
-          fill={colors[tone]}
+          style={{ fill: colors[tone] }}
         />
       </svg>
     </div>

@@ -2,6 +2,7 @@ import { Geist, Geist_Mono, Space_Grotesk, Rajdhani, Inter } from "next/font/goo
 import type { Viewport } from "next";
 import { siteMetadata } from "@/lib/site-config";
 import { LuminousCursor } from "@/components/layout/luminous-cursor";
+import { resolveViewerThemeForRender } from "@/lib/presentation/theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,10 +38,12 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const theme = await resolveViewerThemeForRender();
   return (
     <html
-lang="en"
+      lang="en"
+      data-theme={theme}
       className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${rajdhani.variable} dark h-full antialiased`}
     >
       <body className="min-h-dvh bg-[#020406] text-slate-100">

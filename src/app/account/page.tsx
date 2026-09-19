@@ -4,8 +4,11 @@ import { Card, CardBody, CardHeader, CardTitle, CardSubtitle } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import { getCurrentUser, getCurrentProfile } from "@/lib/auth/session";
+import { resolveTheme } from "@/lib/themes";
 import { PlanBadge } from "@/components/auth/plan-badge";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { ThemeSelector } from "@/components/auth/theme-selector";
+import type { ViewerPlan } from "@/lib/presentation/viewer-plan";
 
 /**
  * Página de cuenta. Server-rendered, 100% server-side auth.
@@ -103,6 +106,8 @@ export default async function AccountPage() {
 
   const { profile } = result;
   const isPremium = profile.role === "premium";
+  const viewerPlan: ViewerPlan = isPremium ? "pro" : "free";
+  const theme = resolveTheme(profile.role, profile.theme);
 
   return (
     <Container size="narrow" className="product-page">
@@ -144,10 +149,14 @@ export default async function AccountPage() {
                 )}
               </div>
 
+              <div className="border-t border-cyan-100/10 pt-4">
+                <ThemeSelector currentTheme={theme} plan={viewerPlan} />
+              </div>
+
               <div className="flex flex-wrap items-center gap-3 border-t border-cyan-100/10 pt-4">
                 {!isPremium ? (
                   <LinkButton href="/soccer/premium-test" tone="primary" size="md">
-                    Ver NYVORX PRO
+                    Desbloquear con NYVORX PRO
                   </LinkButton>
                 ) : null}
                 <LinkButton href="/" tone="outline" size="md">

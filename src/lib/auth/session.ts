@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseServerClient, AuthConfigError } from "@/lib/supabase/server";
+import { isThemeId, type ThemeId } from "@/lib/themes";
 
 export type UserRole = "free" | "premium";
 
@@ -11,6 +12,12 @@ export interface SessionUser {
 export interface UserProfile {
   userId: string;
   role: UserRole;
+  /**
+   * Tema persistido en profiles.theme. Puede faltar (perfil sin dato o
+   * migration 015 sin aplicar) o ser inválido: NUNCA se confía en él como-is.
+   * La resolución real (fair-closed → cyan para FREE) vive en resolveTheme.
+   */
+  theme?: ThemeId;
 }
 
 /** Resultado tipado de lectura de perfil. Distingue ok/missing/error. */
@@ -27,7 +34,7 @@ export interface SessionAuthClient {
   from(table: string): {
     select(columns?: string): {
       eq(column: string, value: unknown): {
-        maybeSingle(): Promise<{ data: { role?: unknown } | null; error: unknown }>;
+        maybeSingle(): Promise<{ data: { role?: unknown; theme?: unknown } | null; error: unknown }>;
       };
     };
     upsert(row: Record<string, unknown>, opts?: { onConflict?: string }): Promise<{ error: unknown }>;
@@ -59,12 +66,38 @@ export async function getCurrentUser(
 }
 
 /**
+ * Un perfil SIN theme es válido (migration 015 puede no estar aplicada o el
+ * usuario nunca eligió tema). La columna "theme" puede no existir todavía en
+ * la DB: eso NO debe romper la lectura del perfil ni el plan del usuario.
+ */
+function isMissingThemeColumn(error: unknown): boolean {
+  const code = typeof error === "object" && error !== null ? (error as { code?: unknown }).code : undefined;
+  const message = typeof error === "object" && error !== null ? String((error as { message?: unknown }).message ?? "") : "";
+  if (code === "42703" || code === "PGRST205") return true;
+  return /(?:column\s+"?theme"?\s+does\s+not\s+exist|could\s+not\s+find\s+the\s+["']?theme)/i.test(message);
+}
+
+async function readProfileRow(
+  supabase: SessionAuthClient,
+  userId: string,
+  includeTheme: boolean,
+): Promise<{ data: { role?: unknown; theme?: unknown } | null; error: unknown }> {
+  return supabase
+    .from("profiles")
+    .select(includeTheme ? "user_id, role, theme" : "user_id, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+}
+
+/**
  * Lee el perfil del usuario. Distingue explícitamente:
  * - ok: perfil válido
  * - missing: usuario sin perfil (no existe fila)
  * - error: fallo de lectura (Supabase, RLS, red, etc.)
  *
- * Nunca lanza. Fail-closed para premium.
+ * Nunca lanza. Fail-closed para premium. La columna theme se lee cuando
+ * existe; si todavía no existe (migration 015 pendiente) se degrada a un
+ * perfil sin theme sin romper la lectura (el role sigue siendo la autoridad).
  */
 export async function getCurrentProfile(
   userId: string,
@@ -78,7 +111,12 @@ export async function getCurrentProfile(
     console.error("[auth] getCurrentProfile: client creation failed.", err);
     return { status: "error", message: "No se pudo conectar al servicio de auth." };
   }
-  const { data, error } = await supabase.from("profiles").select("user_id, role").eq("user_id", userId).maybeSingle();
+  let result = await readProfileRow(supabase, userId, true);
+  if (result.error && isMissingThemeColumn(result.error)) {
+    console.warn("[auth] getCurrentProfile: columna profiles.theme no disponible aún (migration 015 pendiente); leyendo sin theme.", result.error);
+    result = await readProfileRow(supabase, userId, false);
+  }
+  const { data, error } = result;
   if (error) {
     console.error("[auth] getCurrentProfile: query failed.", error);
     return { status: "error", message: "No se pudo leer el perfil." };
@@ -88,7 +126,9 @@ export async function getCurrentProfile(
     console.error("[auth] getCurrentProfile: invalid role value.", data.role);
     return { status: "error", message: "Perfil con rol inválido." };
   }
-  return { status: "ok", profile: { userId, role: data.role } };
+  const profile: UserProfile = { userId, role: data.role };
+  if (isThemeId(data.theme)) profile.theme = data.theme;
+  return { status: "ok", profile };
 }
 
 export class AuthRequiredError extends Error {

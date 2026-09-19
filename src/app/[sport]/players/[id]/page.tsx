@@ -14,6 +14,7 @@ import {
   getPlayerSeasonRanking,
 } from "@/lib/services/statistics-service";
 import { parseSportId, parseEntityId, safeDecodeEntityId } from "@/lib/config/validation";
+import { resolveViewerPlanForRender } from "@/lib/presentation/theme";
 
 export default async function PlayerDetailRoute({
   params,
@@ -34,9 +35,10 @@ export default async function PlayerDetailRoute({
   const leagueId = competition?.league.id ?? team?.league_id ?? "";
   const seasonId = competition?.season.id ?? "";
 
-  const [seasonRank, careerStats] = await Promise.all([
+  const [seasonRank, careerStats, viewerPlan] = await Promise.all([
     getPlayerSeasonRanking(sport, leagueId, seasonId),
     getPlayerCareerStats(sport, id),
+    resolveViewerPlanForRender(),
   ]);
   const seasonAgg = seasonRank.find((r) => r.playerId === id) ?? null;
 
@@ -53,6 +55,7 @@ export default async function PlayerDetailRoute({
       seasonAgg={seasonAgg}
       careerStats={careerStats}
       allSeasonRank={seasonRank}
+      plan={viewerPlan}
     />
   );
 }

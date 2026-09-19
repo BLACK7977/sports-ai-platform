@@ -353,8 +353,8 @@ async function runTests(): Promise<void> {
     }
   }
 
-  // ── D. Probable lineup: authenticated required ──
-  console.log("\n--- D. actionGenerateProbableLineup (authenticated) ---");
+  // ── D. Probable lineup: PRO-only (authenticated required, premium to run) ──
+  console.log("\n--- D. actionGenerateProbableLineup (PRO-only) ---");
   {
     function probableDeps(authClient: SessionAuthClient, clientKey: string, counter: { n: number }): ProbableLineupActionDeps {
       return {
@@ -382,7 +382,7 @@ async function runTests(): Promise<void> {
       check("D2: anonymous causes 0 model calls", counter.n === 0, `calls=${counter.n}`);
     }
 
-    // Authenticated FREE: allowed.
+    // Authenticated FREE: denied (PRO-only), 0 model calls.
     {
       const counter = { n: 0 };
       const result = await runGenerateProbableLineup(
@@ -390,8 +390,23 @@ async function runTests(): Promise<void> {
         MATCH_ID,
         probableDeps(freeClient(), "prob-free", counter),
       );
-      check("D3: authenticated FREE → reaches mocked service", result.ok, JSON.stringify(result));
-      check("D4: authenticated FREE model called exactly once", counter.n === 1, `calls=${counter.n}`);
+      check("D3: authenticated FREE → denied PRO_REQUIRED", !result.ok && result.code === "PRO_REQUIRED", JSON.stringify(result));
+      check("D4: authenticated FREE error is sanitized Pro message", !result.ok && result.error === PRO_REQUIRED_ERROR);
+      check("D5: authenticated FREE causes 0 model calls", counter.n === 0, `calls=${counter.n}`);
+    }
+
+    // FREE + client-supplied plan/role decoy cannot elevate.
+    {
+      const counter = { n: 0 };
+      const deps = probableDeps(freeClient(), "prob-decoy", counter) as ProbableLineupActionDeps & {
+        plan?: string;
+        role?: string;
+      };
+      deps.plan = "premium";
+      deps.role = "premium";
+      const result = await runGenerateProbableLineup(SPORT, MATCH_ID, deps);
+      check("D6: FREE with decoy plan stays denied PRO_REQUIRED", !result.ok && result.code === "PRO_REQUIRED");
+      check("D7: decoy plan causes 0 model calls", counter.n === 0);
     }
 
     // Authenticated PREMIUM: allowed.
@@ -402,8 +417,8 @@ async function runTests(): Promise<void> {
         MATCH_ID,
         probableDeps(premiumClient(), "prob-pro", counter),
       );
-      check("D5: authenticated PREMIUM → reaches mocked service", result.ok);
-      check("D6: authenticated PREMIUM model called exactly once", counter.n === 1);
+      check("D8: authenticated PREMIUM → reaches mocked service", result.ok);
+      check("D9: authenticated PREMIUM model called exactly once", counter.n === 1);
     }
   }
 
@@ -439,6 +454,7 @@ async function runTests(): Promise<void> {
     const playerActions = fs.readFileSync(`${cwd}/src/app/[sport]/players/[id]/actions.ts`, "utf8");
     const sessionSrc = fs.readFileSync(`${cwd}/src/lib/auth/session.ts`, "utf8");
     const shared = fs.readFileSync(`${cwd}/src/lib/services/match-generation-actions.ts`, "utf8");
+    const actionErrors = fs.readFileSync(`${cwd}/src/lib/services/action-errors.ts`, "utf8");
 
     // The correct gate primitive (server-side, ignores client-supplied role/plan) is used.
     check("F1: analyze action uses server-side resolveActionAccess", matchActions.includes("resolveActionAccess"));
@@ -469,7 +485,7 @@ async function runTests(): Promise<void> {
       matchActions.includes(`error: AUTH_REQUIRED_ERROR`) &&
       playerActions.includes(`error: AUTH_REQUIRED_ERROR`));
     check("F11: AUTH_REQUIRED_ERROR is the same sanitized string used by protected actions",
-      shared.includes(`AUTH_REQUIRED_ERROR = "Iniciá sesión para continuar."`) &&
+      actionErrors.includes(`AUTH_REQUIRED_ERROR = "Iniciá sesión para continuar."`) &&
       /error:\s*AUTH_REQUIRED_ERROR/.test(matchActions) &&
       /error:\s*AUTH_REQUIRED_ERROR/.test(playerActions));
 
@@ -481,6 +497,54 @@ async function runTests(): Promise<void> {
       !/function actionPredictMatch\([^)]*(role|plan)/.test(matchActions) &&
       !/function actionGeneratePlayerReport\([^)]*(role|plan)/.test(playerActions);
     check("F13: neither action accepts a role/plan argument", noPlanParam);
+  }
+
+  // ── G. PRO entitlement on legacy actions (analyze / player report), predict stays FREE ──
+  console.log("\n--- G. actionAnalyzeMatch / actionGeneratePlayerReport (PRO-only) ---");
+  {
+    const cwd = process.cwd();
+    const matchActions = fs.readFileSync(`${cwd}/src/app/[sport]/matches/[id]/actions.ts`, "utf8");
+    const playerActions = fs.readFileSync(`${cwd}/src/app/[sport]/players/[id]/actions.ts`, "utf8");
+    const shared = fs.readFileSync(`${cwd}/src/lib/services/match-generation-actions.ts`, "utf8");
+    const actionErrors = fs.readFileSync(`${cwd}/src/lib/services/action-errors.ts`, "utf8");
+
+    // PRO gate exists, after the anonymous auth check, returning the sanitized Pro message.
+    check("G1: analyze gates PRO after auth (access.role !== premium → PRO_REQUIRED_ERROR)",
+      matchActions.includes(`if (access.role !== "premium")`) &&
+      matchActions.includes(`error: PRO_REQUIRED_ERROR`));
+    check("G2: player-report gates PRO after auth",
+      playerActions.includes(`if (access.role !== "premium")`) &&
+      playerActions.includes(`error: PRO_REQUIRED_ERROR`));
+
+    // PRO gate precedes rate-limit consumption (same invariant as explanation).
+    const gAnalyzePro = matchActions.indexOf(`access.role !== "premium"`);
+    const gAnalyzeRate = matchActions.indexOf(`checkAiRateLimit("match-analysis"`);
+    check("G3: analyze PRO gate precedes rate limit", gAnalyzePro > -1 && gAnalyzeRate > gAnalyzePro, `pro=${gAnalyzePro} rate=${gAnalyzeRate}`);
+    const gReportPro = playerActions.indexOf(`access.role !== "premium"`);
+    const gReportRate = playerActions.indexOf(`checkAiRateLimit("player-report"`);
+    check("G4: player-report PRO gate precedes rate limit", gReportPro > -1 && gReportRate > gReportPro, `pro=${gReportPro} rate=${gReportRate}`);
+
+    // PRO gate precedes any LLM provider call.
+    check("G5: analyze PRO gate precedes the LLM service call",
+      gAnalyzePro < matchActions.indexOf("generateMatchAnalysis("));
+    check("G6: player-report PRO gate precedes the LLM service call",
+      gReportPro < playerActions.indexOf("generatePlayerReport("));
+
+    // actionPredictMatch (1X2) and upcoming prediction remain FREE: auth-only, no PRO gate.
+    const predictFn = matchActions.slice(
+      matchActions.indexOf("export async function actionPredictMatch"),
+      matchActions.indexOf("export async function actionGenerateUpcomingPrediction"),
+    );
+    check("G7: predictMatch has NO PRO gate (stays FREE)",
+      !/PRO_REQUIRED|access\.role !== "premium"/.test(predictFn));
+
+    // Shared sanitized PRO string defined once in the guarded core and surfaced by both actions.
+    check("G8: PRO_REQUIRED_ERROR is the shared sanitized Pro string",
+      actionErrors.includes(`PRO_REQUIRED_ERROR`) &&
+      actionErrors.includes(`"Esta función está disponible con el plan Pro de NYVORX."`));
+    check("G9: both legacy actions surface the shared PRO_REQUIRED_ERROR constant",
+      /error:\s*PRO_REQUIRED_ERROR/.test(matchActions) &&
+      /error:\s*PRO_REQUIRED_ERROR/.test(playerActions));
   }
 
   console.log("\n======================================================================");

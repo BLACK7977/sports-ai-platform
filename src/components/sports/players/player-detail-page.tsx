@@ -59,6 +59,7 @@ export default async function PlayerDetailPage({
   seasonAgg,
   careerStats,
   allSeasonRank,
+  plan,
 }: {
   sport: string;
   leagueId: string;
@@ -73,6 +74,7 @@ export default async function PlayerDetailPage({
     >
   >;
   allSeasonRank: SoccerPlayerSeasonAggregate[];
+  plan: "free" | "pro";
 }) {
   const has = getHasSport(sport);
   const sportEmoji = has?.sport.emoji ?? "⚽";
@@ -299,6 +301,7 @@ const radarLabels = [
             leagueId={leagueId}
             seasonId={seasonId}
             playerId={player.id}
+            plan={plan}
           />
         </div>
 
@@ -310,11 +313,15 @@ const radarLabels = [
             </CardSubtitle>
           </CardHeader>
           <CardBody className="!p-0">
-            {careerStats.matches.length === 0 ? (
-              <EmptyRow
-                message="Sin partidos registrados para este jugador (modo demo)."
-                cols={6}
-              />
+{careerStats.matches.length === 0 ? (
+              <DataTable>
+                <TableBody>
+                  <EmptyRow
+                    message="Sin partidos registrados para este jugador (modo demo)."
+                    cols={6}
+                  />
+                </TableBody>
+              </DataTable>
             ) : (
               <DataTable>
                 <TableHead>
